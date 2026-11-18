@@ -2,7 +2,7 @@
 
 A stock screening and analysis platform for publicly listed companies. It pulls fundamentals and quotes from free data providers, stores them in a local database, and exposes them through a fast, filterable web dashboard.
 
-> **Status: planning.** The roadmap lives in [PLAN.md](PLAN.md). Design decisions and reference material live in [docs/](docs/). Tracked work is in the [GitHub milestones and issues](../../issues) once the remote is created.
+> **Status: M1 foundation complete.** The roadmap lives in [PLAN.md](PLAN.md). Design decisions and reference material live in [docs/](docs/). Tracked work is in the [GitHub milestones and issues](https://github.com/mariodod/stockscope/issues).
 
 ## What it will do
 
@@ -31,25 +31,45 @@ Provider adapters  ->  Ingestion jobs  ->  PostgreSQL / SQLite  ->  FastAPI  -> 
 | Charts | Recharts | Declarative React charts for fundamentals history |
 | Styling | Tailwind CSS | Fast, consistent UI |
 
-## Planned first version (v1) scope
+## Quick start
 
-- ~5,000–8,000 US-listed companies.
-- Daily refresh of quotes; fundamentals refreshed on provider cadence (quarterly/annual filings).
-- Market cap, valuation, profitability, growth, leverage, and liquidity metrics (see [metrics catalog](docs/metrics.md)).
-- Screener with multi-filter, multi-sort, and a weighted composite rank.
-- Company detail page with a fundamentals timeline.
-- Local Docker Compose setup for the database.
-
-## Quick start (available after milestone M1)
+Requires Python 3.12+ and (for PostgreSQL) Docker.
 
 ```bash
-cp .env.example .env
-# add your data-provider API keys to .env
-docker compose up -d          # database
-uvicorn app.main:app --reload # API at http://localhost:8000/docs
-npm install --prefix frontend
-npm run dev --prefix frontend # dashboard at http://localhost:5173
+python -m venv .venv
+# Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
+python -m pip install -e ".[dev]"
+
+docker compose up -d                 # PostgreSQL on localhost:5432
+cp .env.example .env                 # then set DATABASE_URL to:
+# DATABASE_URL=postgresql+psycopg://stockscope:stockscope@localhost:5432/stockscope
+
+alembic upgrade head                 # create schema
+python -m app.seed.metrics           # load 38 metrics from docs/metrics.md
+uvicorn app.main:app --reload        # API: http://localhost:8000/docs
 ```
+
+For a zero-dependency local run, skip Docker and the `.env` edit: the default `DATABASE_URL` is SQLite and creates `./stockscope.db`.
+
+## Available endpoints (M1)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/v1/health` | Service status and version |
+| `GET` | `/api/v1/metrics` | Metric registry; optional `?category=valuation` filter |
+| `GET` | `/docs` | Interactive OpenAPI documentation |
+
+The full API plan (screening, ranking, company detail) is in [PLAN.md](PLAN.md) section 8.3.
+
+## Quality gates
+
+```bash
+ruff check .       # lint
+mypy app           # strict type checking
+pytest             # tests
+```
+
+CI runs all three plus a migration/seed check on every push and pull request.
 
 ## Disclaimer
 

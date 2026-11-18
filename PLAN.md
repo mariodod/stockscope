@@ -293,6 +293,8 @@ Each milestone ends in a verifiable state. Acceptance criteria are checked befor
 | 2026-11-19 | Free-tier providers first | Validate the model at zero cost; keep provider layer swappable |
 | 2026-11-19 | US-listed first, global-ready schema | Focus scope; `country`/`exchange` fields allow later expansion |
 | 2026-11-19 | Python (FastAPI) + React/TS | Best data tooling in Python, strong typed frontend |
+| 2026-11-19 | Metric registry is parsed from `docs/metrics.md` | The catalog stays the single source of truth; no duplicated metric list in code |
+| 2026-11-19 | Use `uvicorn` without the `standard` extra | Its PyYAML dependency has no Python 3.15 wheel and requires a C compiler locally; the extra is not needed |
 
 ## 15. Open questions (revisit before M2)
 
