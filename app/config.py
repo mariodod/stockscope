@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     database_url: str = "sqlite:///./stockscope.db"
     admin_token: str = ""
+    fmp_api_key: str = ""
+    sec_user_agent: str = "Stockscope research contact@example.com"
+    quote_refresh_cron: str = "0 22 * * 1-5"
+    fundamentals_refresh_cron: str = "0 3 * * 0"
+    universe_refresh_cron: str = "0 4 * * 0"
 
 
 @lru_cache

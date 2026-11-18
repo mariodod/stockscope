@@ -17,6 +17,8 @@ dependencies = [
   "alembic>=1.14",
   "httpx>=0.28",
   "psycopg[binary]>=3.2",
+  "apscheduler>=3.10",
+  "yfinance>=0.2",
 ]
 
 [project.optional-dependencies]
@@ -51,5 +53,5 @@ python_version = "3.12"
 strict = true
 exclude = ["^alembic/"]
 [[tool.mypy.overrides]]
-module = ["psycopg.*"]
+module = ["psycopg.*", "yfinance.*", "apscheduler.*"]
 ignore_missing_imports = true
