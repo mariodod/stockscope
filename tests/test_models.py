@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -44,3 +45,43 @@ def test_fact_is_unique_per_company_metric_period_source(db_session: Session) ->
     with pytest.raises(IntegrityError):
         db_session.commit()
     db_session.rollback()
+
+
+def test_orphan_fact_is_rejected(db_session: Session) -> None:
+    db_session.add(
+        FundamentalFact(
+            company_id=999999,
+            metric_key="NO_SUCH_METRIC",
+            period="TTM",
+            unit="ratio",
+            source="fmp",
+            as_of_date=date(2026, 11, 18),
+        )
+    )
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+    db_session.rollback()
+
+
+def test_deleting_company_cascades_at_database_level(db_session: Session) -> None:
+    seed_metrics(db_session)
+    company = Company(ticker="TSLA", name="Tesla Inc.")
+    db_session.add(company)
+    db_session.flush()
+    db_session.add(
+        FundamentalFact(
+            company_id=company.id,
+            metric_key="pe_ratio",
+            period="TTM",
+            unit="ratio",
+            source="fmp",
+            as_of_date=date(2026, 11, 18),
+        )
+    )
+    db_session.commit()
+
+    db_session.execute(text("DELETE FROM companies WHERE id = :id"), {"id": company.id})
+    db_session.commit()
+
+    assert db_session.scalar(select(func.count()).select_from(FundamentalFact)) == 0
