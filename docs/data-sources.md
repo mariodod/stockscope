@@ -34,7 +34,7 @@ class Provider(Protocol):
 Rules every adapter must follow:
 
 - **Rate limiting & retries** — respect provider limits; exponential backoff on 429/5xx; never hammer on failure.
-- **Canonical mapping** — translate provider field names into the `metric_key` vocabulary in [metrics.md](metrics.md).
+- **Canonical mapping** — translate provider field names into the `metric_key` vocabulary in [metrics_catalog.md](../app/seed/metrics_catalog.md).
 - **Provenance** — stamp every fact with `source`, `as_of_date`, and (where relevant) `filed_at`.
 - **Nulls** — preserve missing values as `None`; do not substitute zero.
 - **Units & currency** — normalize to the metric's declared unit and record the reporting currency.

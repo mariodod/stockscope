@@ -45,7 +45,7 @@ cp .env.example .env                 # then set DATABASE_URL to:
 # DATABASE_URL=postgresql+psycopg://stockscope:stockscope@localhost:5432/stockscope
 
 alembic upgrade head                 # create schema
-python -m app.seed.metrics           # load 38 metrics from docs/metrics.md
+python -m app.seed.metrics           # load 38 metrics from the packaged catalog
 uvicorn app.main:app --reload        # API: http://localhost:8000/docs
 ```
 

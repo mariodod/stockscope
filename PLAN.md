@@ -90,7 +90,7 @@ stockscope/
 │       ├── hooks/           # TanStack Query hooks
 │       ├── lib/             # API client, metric formatters, types
 │       └── types/
-├── docs/                    # architecture notes, metrics catalog, data sources
+├── docs/                    # architecture notes and data sources
 ├── tests/                   # backend unit + integration tests
 ├── alembic/                 # DB migrations
 ├── docker-compose.yml       # PostgreSQL for local development
@@ -167,7 +167,7 @@ Each adapter is responsible for: rate limiting, retries with backoff, mapping pr
 
 ### 7.4 Data quality & normalization
 
-- Canonical `metric_key` registry maps provider-specific names to one vocabulary (see [metrics catalog](docs/metrics.md)).
+- Canonical `metric_key` registry maps provider-specific names to one vocabulary (see [metrics catalog](../app/seed/metrics_catalog.md)).
 - EBITDA is derived when absent: `operating income + depreciation & amortization`; the derivation is recorded in `MetricDefinition.formula`.
 - Nulls are preserved (never silently zero-filled); UI shows "n/a" and excludes nulls from rankings.
 - Outlier/winsorization rules are applied at ranking time, not at storage time, so raw data stays intact.
@@ -230,7 +230,7 @@ Each milestone ends in a verifiable state. Acceptance criteria are checked befor
 
 ### M1 — Foundation & data model
 - Repo scaffold, `pyproject.toml`, lint/type/test config, Docker Compose Postgres, Alembic setup.
-- ORM models + first migration; metric registry seeded from `docs/metrics.md`.
+- ORM models + first migration; metric registry seeded from `app/seed/metrics_catalog.md`.
 - FastAPI skeleton with `/health` and `/metrics`; CI runs lint + tests.
 - **Acceptance:** clean clone → `docker compose up -d` → API `/docs` works; migration runs; tests pass.
 
@@ -293,7 +293,7 @@ Each milestone ends in a verifiable state. Acceptance criteria are checked befor
 | 2026-11-19 | Free-tier providers first | Validate the model at zero cost; keep provider layer swappable |
 | 2026-11-19 | US-listed first, global-ready schema | Focus scope; `country`/`exchange` fields allow later expansion |
 | 2026-11-19 | Python (FastAPI) + React/TS | Best data tooling in Python, strong typed frontend |
-| 2026-11-19 | Metric registry is parsed from `docs/metrics.md` | The catalog stays the single source of truth; no duplicated metric list in code |
+| 2026-11-19 | Metric registry is parsed from `app/seed/metrics_catalog.md` | The catalog stays the single source of truth and ships inside the package |
 | 2026-11-19 | Use `uvicorn` without the `standard` extra | Its PyYAML dependency has no Python 3.15 wheel and requires a C compiler locally; the extra is not needed |
 
 ## 15. Open questions (revisit before M2)

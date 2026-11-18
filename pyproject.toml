@@ -31,6 +31,9 @@ dev = [
 where = ["."]
 include = ["app*"]
 
+[tool.setuptools.package-data]
+"app.seed" = ["metrics_catalog.md"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"

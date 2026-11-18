@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models import MetricDefinition, MetricDirection
 
-DOCS_PATH = Path(__file__).resolve().parents[2] / "docs" / "metrics.md"
+DOCS_PATH = Path(__file__).with_name("metrics_catalog.md")
 
 CATEGORIES = {
     "Valuation": "valuation",

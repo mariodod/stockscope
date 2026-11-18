@@ -10,7 +10,7 @@ Instructions for any AI agent working in this repository. These apply to every s
 ## Project context (read before changing anything)
 
 - `PLAN.md` — phases, architecture, API design, risks, decisions log.
-- `docs/metrics.md` — canonical metric vocabulary; update it when metrics change.
+- `app/seed/metrics_catalog.md` — canonical metric vocabulary; update it when metrics change.
 - `docs/data-sources.md` — provider strategy and adapter contract.
 - `README.md` — user-facing setup and disclaimer.
 
