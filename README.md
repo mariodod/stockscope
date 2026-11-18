@@ -51,6 +51,28 @@ uvicorn app.main:app --reload        # API: http://localhost:8000/docs
 
 For a zero-dependency local run, skip Docker and the `.env` edit: the default `DATABASE_URL` is SQLite and creates `./stockscope.db`.
 
+## Data ingestion (M2)
+
+Providers sit behind a common interface (`app/providers/base.py`) so a source can be swapped without touching the API or UI.
+
+| Job | Provider | Command | Notes |
+| --- | --- | --- | --- |
+| `universe` | SEC EDGAR | `python -m app.ingestion.runner --job universe` | Free, no key; ~10,400 US listings |
+| `quotes` | FMP | `python -m app.ingestion.runner --job quotes` | Needs `FMP_API_KEY` in `.env` |
+| `fundamentals` | yfinance | `python -m app.ingestion.runner --job fundamentals --limit 100` | Free, no key; start with a limit to respect rate limits |
+
+Use `--job all` to run every job. Each run writes a `RefreshRun` row with its status and row count. Jobs upsert on natural keys, so rerunning them does not create duplicates.
+
+To run the refresh jobs on a schedule, start the APScheduler worker:
+
+```python
+from app.worker.scheduler import start_scheduler
+
+scheduler = start_scheduler()  # cron expressions come from .env
+```
+
+Adapter tests use recorded-style payloads and run in CI without live API calls.
+
 ## Available endpoints (M1)
 
 | Method | Path | Purpose |

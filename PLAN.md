@@ -295,6 +295,8 @@ Each milestone ends in a verifiable state. Acceptance criteria are checked befor
 | 2026-11-19 | Python (FastAPI) + React/TS | Best data tooling in Python, strong typed frontend |
 | 2026-11-19 | Metric registry is parsed from `app/seed/metrics_catalog.md` | The catalog stays the single source of truth and ships inside the package |
 | 2026-11-19 | Use `uvicorn` without the `standard` extra | Its PyYAML dependency has no Python 3.15 wheel and requires a C compiler locally; the extra is not needed |
+| 2026-11-19 | SEC `company_tickers.json` is the primary universe source | Free and needs no key; live sync produced 10,400 US listings |
+| 2026-11-19 | Only the first ticker keeps a CIK when share classes share one | SEC lists GOOG and GOOGL under the same CIK, which violates the unique constraint |
 
 ## 15. Open questions (revisit before M2)
 
