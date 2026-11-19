@@ -73,15 +73,37 @@ scheduler = start_scheduler()  # cron expressions come from .env
 
 Adapter tests use recorded-style payloads and run in CI without live API calls.
 
-## Available endpoints (M1)
+## Available endpoints
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | Service status and version |
 | `GET` | `/api/v1/metrics` | Metric registry; optional `?category=valuation` filter |
+| `GET` | `/api/v1/companies` | Filterable, sortable, paginated company list |
+| `POST` | `/api/v1/screen` | Structured filters, sorting, and composite ranking |
+| `GET` | `/api/v1/companies/{ticker}` | Company detail with latest metrics and history |
+| `GET` | `/api/v1/sectors` | Distinct sectors and industries for filter dropdowns |
 | `GET` | `/docs` | Interactive OpenAPI documentation |
 
-The full API plan (screening, ranking, company detail) is in [PLAN.md](PLAN.md) section 8.3.
+Example screen request:
+
+```json
+{
+  "filters": [
+    {"metric": "market_cap", "op": "gte", "value": 1000000000},
+    {"metric": "pe_ratio", "op": "between", "value": [0, 25]},
+    {"metric": "sector", "op": "eq", "value": "Technology"}
+  ],
+  "sort": [{"metric": "revenue_growth_yoy", "dir": "desc"}],
+  "ranking": {"weights": {"pe_ratio": 0.3, "roe": 0.7}},
+  "limit": 50,
+  "offset": 0
+}
+```
+
+Filters are whitelisted against the metric registry and compiled into parameterized SQL. Composite scores are weighted sums of percentile ranks, oriented by each metric's direction; missing values score neutrally and are listed in `missing_metrics`. Results are tie-broken by ticker so repeated screens return the same order.
+
+A screen with five filters, three sort keys and composite ranking over 10,400 seeded companies (52,000 facts) completed in **0.399s** locally.
 
 ## Quality gates
 
