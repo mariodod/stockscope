@@ -12,7 +12,7 @@ describe('metric formatting', () => {
 
   it('formats units by metric type', () => {
     expect(formatMetric(0.234, 'percent')).toBe('23.4%');
-    expect(formatMetric(1_500_000_000, 'currency')).toContain('$1.5B');
+    expect(formatMetric(1_500_000_000, 'currency')).toMatch(/^\$1\.5\d?B$/);
     expect(formatMetric('18.25', 'ratio')).toBe('18.25');
     expect(formatMetric(null, 'ratio')).toBe('\u2014');
   });
