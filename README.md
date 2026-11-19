@@ -51,6 +51,22 @@ uvicorn app.main:app --reload        # API: http://localhost:8000/docs
 
 For a zero-dependency local run, skip Docker and the `.env` edit: the default `DATABASE_URL` is SQLite and creates `./stockscope.db`.
 
+## Web dashboard (M4)
+
+The dashboard lives in `frontend/` and uses React, TypeScript, TanStack Table/Query, Tailwind CSS and Recharts. All API responses are validated with Zod at the boundary.
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:5173 (proxies /api to localhost:8000)
+```
+
+`npm run test`, `npm run lint` and `npm run build` are the frontend quality gates; CI runs all three.
+
+- **Screener** — filter by any metric, sort by one metric, toggle columns, add weighted composite ranking, and paginate.
+- **Company detail** — fundamentals timeline (revenue, EBITDA, EPS) and latest metrics with source and as-of date.
+- **Shareable state** — filters, sort, weights and pagination are encoded in the URL, so a screen can be bookmarked or sent to someone else.
+
 ## Data ingestion (M2)
 
 Providers sit behind a common interface (`app/providers/base.py`) so a source can be swapped without touching the API or UI.
