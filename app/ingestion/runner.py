@@ -5,11 +5,10 @@ import argparse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db.session import SessionLocal
 from app.ingestion.jobs import refresh_fundamentals, refresh_quotes, sync_universe, track_refresh
 from app.models import Company
-from app.providers import FMPProvider, Provider, SECProvider, YFinanceProvider
+from app.providers import Provider, build_providers
 
 JOBS = ("universe", "quotes", "fundamentals", "all")
 
@@ -23,19 +22,20 @@ def _active_tickers(session: Session, limit: int | None) -> list[str]:
 
 def run_job(job: str, limit: int | None = None) -> None:
     """Run one ingestion job and record its outcome in RefreshRun."""
+    providers = build_providers()
     with SessionLocal() as session:
         if job in {"universe", "all"}:
-            provider: Provider = SECProvider()
+            provider: Provider = providers["sec"]
             with track_refresh(session, "universe", provider.name) as run:
                 run.rows_written = sync_universe(session, provider, limit)
         if job in {"quotes", "all"}:
-            provider = FMPProvider(api_key=settings.fmp_api_key)
+            provider = providers["fmp"]
             with track_refresh(session, "quotes", provider.name) as run:
                 run.rows_written = refresh_quotes(
                     session, provider, _active_tickers(session, limit)
                 )
         if job in {"fundamentals", "all"}:
-            provider = YFinanceProvider()
+            provider = providers["yfinance"]
             with track_refresh(session, "fundamentals", provider.name) as run:
                 run.rows_written = refresh_fundamentals(
                     session, provider, _active_tickers(session, limit)

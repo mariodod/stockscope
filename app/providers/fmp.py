@@ -7,7 +7,7 @@ import httpx
 
 from app.config import settings
 from app.providers.base import CompanySeed, FactSeed, QuoteSeed
-from app.providers.http import fetch_json
+from app.providers.http import RateLimiter, fetch_json
 from app.providers.values import as_of, dec, whole
 
 RATIO_FIELDS = {
@@ -30,17 +30,25 @@ RATIO_FIELDS = {
 class FMPProvider:
     name = "fmp"
 
-    def __init__(self, client: httpx.Client | None = None, api_key: str = "") -> None:
+    def __init__(
+        self,
+        client: httpx.Client | None = None,
+        api_key: str = "",
+        limiter: RateLimiter | None = None,
+    ) -> None:
         self.client = client or httpx.Client(
             base_url="https://financialmodelingprep.com", timeout=15.0
         )
         self.api_key = api_key or settings.fmp_api_key
+        self.limiter = limiter
 
     def _params(self, **extra: str) -> dict[str, str]:
         return {"apikey": self.api_key, **extra}
 
     def list_companies(self) -> Iterator[CompanySeed]:
-        rows = fetch_json(self.client, "/api/v3/stock/list", params=self._params())
+        rows = fetch_json(
+            self.client, "/api/v3/stock/list", params=self._params(), limiter=self.limiter
+        )
         for row in rows:
             ticker = row.get("symbol")
             if not ticker:
@@ -53,7 +61,9 @@ class FMPProvider:
             )
 
     def get_quote(self, ticker: str) -> QuoteSeed | None:
-        rows = fetch_json(self.client, f"/api/v3/quote/{ticker}", params=self._params())
+        rows = fetch_json(
+            self.client, f"/api/v3/quote/{ticker}", params=self._params(), limiter=self.limiter
+        )
         if not rows:
             return None
         row = rows[0]
@@ -69,7 +79,9 @@ class FMPProvider:
         )
 
     def get_fundamentals(self, ticker: str, cik: str | None = None) -> Iterator[FactSeed]:
-        rows = fetch_json(self.client, f"/api/v3/ratios/{ticker}", params=self._params())
+        rows = fetch_json(
+            self.client, f"/api/v3/ratios/{ticker}", params=self._params(), limiter=self.limiter
+        )
         if not rows:
             return
         row = rows[0]

@@ -8,7 +8,7 @@ import httpx
 
 from app.config import settings
 from app.providers.base import CompanySeed, FactSeed
-from app.providers.http import fetch_json
+from app.providers.http import RateLimiter, fetch_json
 from app.providers.values import dec
 
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
@@ -27,15 +27,23 @@ TAG_MAP = {
 class SECProvider:
     name = "sec"
 
-    def __init__(self, client: httpx.Client | None = None, user_agent: str = "") -> None:
+    def __init__(
+        self,
+        client: httpx.Client | None = None,
+        user_agent: str = "",
+        limiter: RateLimiter | None = None,
+    ) -> None:
         self.client = client or httpx.Client(timeout=20.0)
         self.user_agent = user_agent or settings.sec_user_agent
+        self.limiter = limiter
 
     def _headers(self) -> dict[str, str]:
         return {"User-Agent": self.user_agent, "Accept-Encoding": "gzip, deflate"}
 
     def list_companies(self) -> Iterator[CompanySeed]:
-        payload = fetch_json(self.client, TICKERS_URL, headers=self._headers())
+        payload = fetch_json(
+            self.client, TICKERS_URL, headers=self._headers(), limiter=self.limiter
+        )
         for row in payload.values():
             ticker = row.get("ticker")
             if not ticker:
@@ -64,7 +72,10 @@ class SECProvider:
         if not cik:
             return
         facts = fetch_json(
-            self.client, FACTS_URL.format(cik=int(cik)), headers=self._headers()
+            self.client,
+            FACTS_URL.format(cik=int(cik)),
+            headers=self._headers(),
+            limiter=self.limiter,
         )
         values: dict[str, tuple[float | None, date | None]] = {}
         for tag, (metric_key, _unit) in TAG_MAP.items():
