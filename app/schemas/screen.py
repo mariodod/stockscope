@@ -69,6 +69,7 @@ class RankingSpec(BaseModel):
 class ScreenRequest(BaseModel):
     filters: list[FilterCondition] = Field(default_factory=list)
     sort: list[SortSpec] = Field(default_factory=list)
+    columns: list[str] = Field(default_factory=list)
     ranking: RankingSpec | None = None
     limit: int = Field(default=50, ge=1, le=500)
     offset: int = Field(default=0, ge=0)

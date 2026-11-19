@@ -149,6 +149,7 @@ def screen(session: Session, request: ScreenRequest) -> PagedCompanies:
     """Run one screen: filter, rank, sort deterministically, then paginate."""
     keys = {condition.metric for condition in request.filters}
     keys |= {spec.metric for spec in request.sort}
+    keys |= set(request.columns)
     if request.ranking is not None:
         keys |= set(request.ranking.weights)
 

@@ -174,8 +174,9 @@ def test_company_detail_and_sectors(client: TestClient, db_session: Session) -> 
     assert detail.status_code == 200
     body = detail.json()
     assert body["ticker"] == "AAA"
-    keys = {metric["metric_key"] for metric in body["latest_metrics"]}
-    assert {"pe_ratio", "roe", "revenue_growth_yoy", "market_cap"} <= keys
+    keys = [metric["metric_key"] for metric in body["latest_metrics"]]
+    assert {"pe_ratio", "roe", "revenue_growth_yoy", "market_cap"} <= set(keys)
+    assert len(keys) == len(set(keys))
     assert len(body["history"]) == 3
 
     assert client.get("/api/v1/companies/ZZZ").status_code == 404

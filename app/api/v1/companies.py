@@ -85,18 +85,24 @@ def get_company(ticker: str, db: DbSession) -> CompanyDetail:
             if quote.get(key) is None:
                 continue
             label, unit, direction = labels.get(key, (key, "currency", None))
-            latest.append(
-                LatestMetric(
-                    metric_key=key,
-                    label=label,
-                    value=quote[key],
-                    unit=unit,
-                    direction=direction,
-                    period="Latest",
-                    source=quote["source"],
-                    as_of_date=quote["as_of_date"],
-                )
+            item = LatestMetric(
+                metric_key=key,
+                label=label,
+                value=quote[key],
+                unit=unit,
+                direction=direction,
+                period="Latest",
+                source=quote["source"],
+                as_of_date=quote["as_of_date"],
             )
+            existing_index = next(
+                (index for index, metric in enumerate(latest) if metric.metric_key == key),
+                None,
+            )
+            if existing_index is None:
+                latest.append(item)
+            else:
+                latest[existing_index] = item
 
     history = [FactPoint(**row) for row in fact_history(db, company.id)]
     return CompanyDetail(
