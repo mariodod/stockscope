@@ -1,18 +1,13 @@
 """Metric registry endpoint — drives the screener's filters and columns."""
 
-from typing import Annotated
-
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from app.api.deps import DbSession
 from app.models import MetricDefinition
 from app.schemas.metric import MetricRead
 
 router = APIRouter(tags=["metrics"])
-
-DbSession = Annotated[Session, Depends(get_db)]
 
 
 @router.get("/metrics", response_model=list[MetricRead])
