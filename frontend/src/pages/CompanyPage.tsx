@@ -11,8 +11,8 @@ import {
 } from 'recharts';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
-import { formatMetric, toNumber } from '../lib/format';
-import { useCompany } from '../lib/queries';
+import { formatMetric, isStale, toNumber } from '../lib/format';
+import { useCompany, useDataQuality } from '../lib/queries';
 
 const CHART_METRICS = ['revenue', 'ebitda', 'eps_ttm'];
 
@@ -20,6 +20,8 @@ export function CompanyPage() {
   const { ticker } = useParams();
   const [params] = useSearchParams();
   const companyQuery = useCompany(ticker ?? '');
+  const qualityQuery = useDataQuality();
+  const staleAfterDays = qualityQuery.data?.stale_after_days ?? 90;
   const detail = companyQuery.data;
 
   const chartData = useMemo(() => {
@@ -102,7 +104,14 @@ export function CompanyPage() {
                   </td>
                   <td className="px-3 py-2">{metric.period}</td>
                   <td className="px-3 py-2">{metric.source}</td>
-                  <td className="px-3 py-2">{metric.as_of_date}</td>
+                  <td className="px-3 py-2">
+                    {metric.as_of_date}
+                    {isStale(metric.as_of_date, staleAfterDays) && (
+                      <span className="ml-2 rounded bg-amber-100 px-1 text-xs text-amber-800">
+                        stale
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

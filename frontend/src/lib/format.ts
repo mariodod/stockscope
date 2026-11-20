@@ -22,6 +22,12 @@ export function formatMetric(value: string | number | null | undefined, unit: st
   return String(value);
 }
 
+export function isStale(asOf: string, staleAfterDays: number): boolean {
+  const timestamp = new Date(asOf).getTime();
+  if (Number.isNaN(timestamp)) return false;
+  return timestamp < Date.now() - staleAfterDays * 86_400_000;
+}
+
 export function scoreText(value: number | null): string {
   return value === null ? '\u2014' : value.toFixed(3);
 }

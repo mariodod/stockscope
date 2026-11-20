@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { apiGet, apiPost } from './api';
 import {
   companyDetailSchema,
+  dataQualitySchema,
   metricSchema,
   pagedCompaniesSchema,
   sectorCountsSchema,
@@ -29,6 +30,14 @@ export function useCompany(ticker: string) {
     queryKey: ['company', ticker],
     queryFn: () => apiGet(`/api/v1/companies/${ticker}`, companyDetailSchema),
     enabled: ticker.length > 0,
+  });
+}
+
+export function useDataQuality() {
+  return useQuery({
+    queryKey: ['data-quality'],
+    queryFn: () => apiGet('/api/v1/data-quality', dataQualitySchema),
+    staleTime: 300_000,
   });
 }
 

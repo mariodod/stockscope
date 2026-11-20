@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { FilterBar } from '../components/FilterBar';
 import { MetricsTable } from '../components/MetricsTable';
 import { RankingPanel } from '../components/RankingPanel';
-import { useMetrics, useScreen, useSectors } from '../lib/queries';
+import { useDataQuality, useMetrics, useScreen, useSectors } from '../lib/queries';
 import { defaultState, readState, stateToRequest, writeState, type ScreenState } from '../lib/state';
 
 export function ScreenerPage() {
@@ -19,6 +19,7 @@ export function ScreenerPage() {
     [state, metrics],
   );
   const sectorsQuery = useSectors();
+  const qualityQuery = useDataQuality();
   const screenQuery = useScreen(request);
 
   function update(next: ScreenState) {
@@ -65,6 +66,34 @@ export function ScreenerPage() {
               ))}
             </select>
           </div>
+
+          {qualityQuery.data && (
+            <div className="rounded border border-slate-200 bg-white p-3 text-sm">
+              <h2 className="font-semibold">Data quality</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Stale after {qualityQuery.data.stale_after_days} days · generated{' '}
+                {new Date(qualityQuery.data.generated_at).toLocaleString()}
+              </p>
+              <ul className="mt-2 space-y-1">
+                {qualityQuery.data.metrics
+                  .filter((metric) => metric.stale_count > 0)
+                  .sort((a, b) => b.stale_count - a.stale_count)
+                  .slice(0, 5)
+                  .map((metric) => (
+                    <li key={metric.key} className="flex justify-between gap-2">
+                      <span className="truncate">{metric.label}</span>
+                      <span className="tabular text-amber-700">{metric.stale_count} stale</span>
+                    </li>
+                  ))}
+              </ul>
+              {qualityQuery.data.last_refreshes[0] && (
+                <p className="mt-2 text-xs text-slate-500">
+                  Last refresh: {qualityQuery.data.last_refreshes[0].job} ·{' '}
+                  {qualityQuery.data.last_refreshes[0].status}
+                </p>
+              )}
+            </div>
+          )}
 
           {metricsQuery.isLoading && <p className="text-sm">Loading metrics…</p>}
           <FilterBar

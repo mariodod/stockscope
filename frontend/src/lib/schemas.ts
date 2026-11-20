@@ -108,6 +108,32 @@ export const sortSpecSchema = z.object({
 });
 export type SortSpec = z.infer<typeof sortSpecSchema>;
 
+export const metricCoverageSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  total_companies: z.number(),
+  companies_with_value: z.number(),
+  coverage_pct: z.number(),
+  stale_count: z.number(),
+  latest_as_of: z.string().nullable(),
+});
+
+export const dataQualitySchema = z.object({
+  generated_at: z.string(),
+  stale_after_days: z.number(),
+  metrics: z.array(metricCoverageSchema),
+  last_refreshes: z.array(
+    z.object({
+      job: z.string(),
+      provider: z.string().nullable(),
+      status: z.string(),
+      finished_at: z.string().nullable(),
+      rows_written: z.number(),
+    }),
+  ),
+});
+export type DataQualityReport = z.infer<typeof dataQualitySchema>;
+
 export const screenRequestSchema = z.object({
   filters: z.array(filterConditionSchema),
   sort: z.array(sortSpecSchema),

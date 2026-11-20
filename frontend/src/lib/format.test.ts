@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatMetric, scoreText, toNumber } from './format';
+import { formatMetric, isStale, scoreText, toNumber } from './format';
 
 describe('metric formatting', () => {
   it('parses numbers from API strings and rejects junk', () => {
@@ -15,6 +15,12 @@ describe('metric formatting', () => {
     expect(formatMetric(1_500_000_000, 'currency')).toMatch(/^\$1\.5\d?B$/);
     expect(formatMetric('18.25', 'ratio')).toBe('18.25');
     expect(formatMetric(null, 'ratio')).toBe('\u2014');
+  });
+
+  it('flags dates older than the staleness window', () => {
+    expect(isStale('2000-01-01', 90)).toBe(true);
+    expect(isStale('2999-01-01', 90)).toBe(false);
+    expect(isStale('not-a-date', 90)).toBe(false);
   });
 
   it('formats scores to three decimals', () => {
