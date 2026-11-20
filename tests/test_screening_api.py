@@ -211,6 +211,22 @@ def test_non_finite_weights_are_rejected(client: TestClient, db_session: Session
     assert response.status_code == 422
 
 
+def test_data_quality_reports_coverage_and_staleness(
+    client: TestClient, db_session: Session
+) -> None:
+    _seed(db_session)
+
+    response = client.get("/api/v1/data-quality")
+
+    assert response.status_code == 200
+    body = response.json()
+    pe = next(metric for metric in body["metrics"] if metric["key"] == "pe_ratio")
+    assert pe["total_companies"] == 4
+    assert pe["companies_with_value"] == 3
+    assert pe["coverage_pct"] == 75.0
+    assert pe["stale_count"] > 0
+
+
 def test_company_detail_and_sectors(client: TestClient, db_session: Session) -> None:
     _seed(db_session)
 

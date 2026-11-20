@@ -1,6 +1,7 @@
 """Request and response models for the screener."""
 
 import math
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -134,3 +135,28 @@ class CompanyDetail(BaseModel):
 class SectorCounts(BaseModel):
     sectors: list[str]
     industries: list[str]
+
+
+class MetricCoverage(BaseModel):
+    key: str
+    label: str
+    total_companies: int
+    companies_with_value: int
+    coverage_pct: float
+    stale_count: int
+    latest_as_of: date | None = None
+
+
+class RefreshSummary(BaseModel):
+    job: str
+    provider: str | None = None
+    status: str
+    finished_at: datetime | None = None
+    rows_written: int
+
+
+class DataQualityReport(BaseModel):
+    generated_at: datetime
+    stale_after_days: int
+    metrics: list[MetricCoverage]
+    last_refreshes: list[RefreshSummary]
