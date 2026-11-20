@@ -15,7 +15,7 @@ No provider is a hard dependency of the API or UI. All external data enters thro
 
 ## Chosen approach for v1
 
-1. **Universe** — FMP stock list, with NASDAQ screener as a fallback/cross-check.
+1. **Universe** — SEC EDGAR `company_tickers.json` (free, no key); FMP stock list is available as an adapter but is not used by the universe job.
 2. **Quotes & market cap** — FMP quote endpoints (daily refresh).
 3. **Ratios & fundamentals** — yfinance `.info` / financials for breadth, with SEC EDGAR as the authoritative fallback for US filers and for history.
 4. **Paid upgrade path** — if free coverage proves insufficient, swap in Polygon / FMP paid / Tiingo behind the same adapter interface. This is configuration + one adapter, not a rewrite.

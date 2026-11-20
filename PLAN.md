@@ -212,7 +212,6 @@ This is explainable (each component is visible per company) and robust to outlie
 | `GET` | `/api/v1/companies/{ticker}` | Company detail + latest metrics + history |
 | `GET` | `/api/v1/metrics` | Metric registry (drives UI controls) |
 | `GET` | `/api/v1/sectors` | Distinct sectors/industries for filter dropdowns |
-| `POST` | `/api/v1/refresh` | Trigger ingestion job (auth-protected) |
 | `GET` | `/api/v1/health` | Health check |
 
 All list endpoints return `total`, `limit`, `offset`, and `items` for pagination.

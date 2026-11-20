@@ -20,7 +20,7 @@ Follow the repository layout in `PLAN.md` section 6.2. When a change affects a d
 
 - **Correctness & tests** — add or update tests for every behavior change. Test observable behavior, not implementation details. Prove the change works against the real artifact (run the code), not just "it compiles".
 - **Types & boundaries** — keep typing strict end-to-end (mypy on Python, TypeScript strict mode on the frontend). Validate external data at boundaries (Pydantic at API/provider edges); keep business logic in pure functions. Make illegal states unrepresentable where practical.
-- **Security** — secrets only via environment variables / `.env` (never committed). Parameterized SQLAlchemy expressions only; no string-built SQL. Keep the `/refresh` endpoint auth-protected. Never log API keys or tokens.
+- **Security** — secrets only via environment variables / `.env` (never committed). Parameterized SQLAlchemy expressions only; no string-built SQL. Never log API keys or tokens.
 - **Data integrity** — ingestion stays idempotent (upsert on natural keys), preserves nulls (never zero-fill), and stamps every fact with `source` and `as_of_date`. Canonical `metric_key`s come from the registry.
 - **Simplicity** — smallest change that fully solves the problem. No speculative abstractions, no dead code, no compatibility shims for code that does not exist yet. Prefer deletion before addition.
 - **Consistency** — match existing naming, style, and structure. Run the project's quality gates (ruff, mypy, pytest; ESLint, Prettier, frontend tests) and make them green before committing.

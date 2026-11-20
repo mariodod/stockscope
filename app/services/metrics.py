@@ -31,32 +31,29 @@ def validate_metric_keys(session: Session, keys: set[str]) -> None:
         raise ValueError(f"Unknown metric keys: {', '.join(sorted(unknown))}")
 
 
-def _ranked_facts() -> Any:
-    """Facts ranked newest-first per company and metric."""
-    return select(
-        FundamentalFact.company_id.label("company_id"),
-        FundamentalFact.metric_key.label("metric_key"),
-        FundamentalFact.period.label("period"),
-        FundamentalFact.value.label("value"),
-        FundamentalFact.unit.label("unit"),
-        FundamentalFact.source.label("source"),
-        FundamentalFact.as_of_date.label("as_of_date"),
-        func.row_number()
-        .over(
-            partition_by=[FundamentalFact.company_id, FundamentalFact.metric_key],
-            order_by=[
-                FundamentalFact.as_of_date.desc(),
-                FundamentalFact.filed_at.desc(),
-                FundamentalFact.id.desc(),
-            ],
-        )
-        .label("rn"),
-    ).subquery()
+def _fact_order() -> list[Any]:
+    """Shared newest-first ordering for fact windows."""
+    return [
+        FundamentalFact.as_of_date.desc(),
+        FundamentalFact.filed_at.desc(),
+        FundamentalFact.id.desc(),
+    ]
 
 
 def _latest_facts() -> Select[Any]:
     """Latest fact per company and metric, with quote precedence marker."""
-    ranked = _ranked_facts()
+    ranked = select(
+        FundamentalFact.company_id.label("company_id"),
+        FundamentalFact.metric_key.label("metric_key"),
+        FundamentalFact.value.label("value"),
+        FundamentalFact.as_of_date.label("as_of_date"),
+        func.row_number()
+        .over(
+            partition_by=[FundamentalFact.company_id, FundamentalFact.metric_key],
+            order_by=_fact_order(),
+        )
+        .label("rn"),
+    ).subquery()
     return select(
         ranked.c.company_id,
         ranked.c.metric_key,
@@ -122,7 +119,21 @@ def latest_metric_pivot(keys: set[str]) -> Subquery:
 
 def latest_fact_rows(session: Session, company_id: int) -> list[dict[str, Any]]:
     """Latest fact per metric for a company, with provenance."""
-    ranked = _ranked_facts()
+    ranked = select(
+        FundamentalFact.company_id.label("company_id"),
+        FundamentalFact.metric_key.label("metric_key"),
+        FundamentalFact.period.label("period"),
+        FundamentalFact.value.label("value"),
+        FundamentalFact.unit.label("unit"),
+        FundamentalFact.source.label("source"),
+        FundamentalFact.as_of_date.label("as_of_date"),
+        func.row_number()
+        .over(
+            partition_by=[FundamentalFact.company_id, FundamentalFact.metric_key],
+            order_by=_fact_order(),
+        )
+        .label("rn"),
+    ).subquery()
     rows = session.execute(
         select(ranked).where(ranked.c.rn == 1, ranked.c.company_id == company_id)
     ).mappings()
