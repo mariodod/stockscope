@@ -14,7 +14,7 @@ class TTLCache:
         self._entries: dict[str, tuple[float, object]] = {}
         self._lock = threading.Lock()
 
-    def get_or_set(self, key: str, loader: Callable[[], T], ttl: float | None = None) -> T:
+    def get_or_set(self, key: str, loader: Callable[[], T]) -> T:
         now = time.monotonic()
         with self._lock:
             entry = self._entries.get(key)
@@ -23,7 +23,7 @@ class TTLCache:
 
         value = loader()
         with self._lock:
-            self._entries[key] = (now + (self.default_ttl if ttl is None else ttl), value)
+            self._entries[key] = (now + self.default_ttl, value)
         return value
 
     def clear(self) -> None:
