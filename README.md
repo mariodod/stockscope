@@ -128,7 +128,7 @@ Example screen request:
 
 Filters are whitelisted against the metric registry and compiled into parameterized SQL. Composite scores are weighted sums of percentile ranks, oriented by each metric's direction; missing values score neutrally and are listed in `missing_metrics`. Results are tie-broken by ticker so repeated screens return the same order.
 
-Run the reproducible benchmark with `python scripts/benchmark_screen.py`. A screen with three filters, three sort keys and composite ranking over 10,400 seeded companies (41,600 facts) completed in **0.848s** locally.
+Run the reproducible benchmark with `python scripts/benchmark_screen.py`. A screen with three filters, three sort keys and composite ranking over 10,400 seeded companies (41,600 facts) completed in **0.848s** on a quiet machine; timing rises with CPU load.
 
 ## Quality gates
 
