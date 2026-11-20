@@ -126,6 +126,26 @@ def test_track_refresh_records_database_failures(db_session: Session) -> None:
     assert "UNIQUE" in (failed.error or "").upper()
 
 
+def test_facts_without_source_upsert_idempotently(db_session: Session) -> None:
+    seed_metrics(db_session)
+    sync_universe(db_session, FakeProvider(), limit=1)
+
+    class NoSourceProvider(FakeProvider):
+        def get_fundamentals(self, ticker: str, cik: str | None = None) -> Iterator[FactSeed]:
+            yield FactSeed(
+                metric_key="pe_ratio",
+                period="TTM",
+                value=Decimal("15"),
+                unit="ratio",
+                as_of_date=date(2026, 1, 2),
+            )
+
+    provider = NoSourceProvider()
+    assert refresh_fundamentals(db_session, provider, ["S00000"]) == 1
+    assert refresh_fundamentals(db_session, provider, ["S00000"]) == 1
+    assert db_session.scalar(select(func.count()).select_from(FundamentalFact)) == 1
+
+
 def test_unknown_metric_keys_are_skipped(db_session: Session) -> None:
     seed_metrics(db_session)
     provider = FakeProvider()

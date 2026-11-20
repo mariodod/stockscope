@@ -126,14 +126,15 @@ def refresh_fundamentals(
         for seed in provider.get_fundamentals(ticker, company.cik):
             if seed.metric_key not in valid_keys:
                 continue
-            key = (company.id, seed.metric_key, seed.period, seed.source)
+            source = seed.source or provider.name
+            key = (company.id, seed.metric_key, seed.period, source)
             fact = existing.get(key)
             if fact is None:
                 fact = FundamentalFact(
                     company_id=company.id,
                     metric_key=seed.metric_key,
                     period=seed.period,
-                    source=seed.source or provider.name,
+                    source=source,
                 )
                 session.add(fact)
                 existing[key] = fact
