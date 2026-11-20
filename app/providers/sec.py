@@ -59,14 +59,27 @@ class SECProvider:
     def get_quote(self, ticker: str) -> None:
         return None
 
-    def _latest_usd(self, facts: dict[str, Any], tag: str) -> tuple[float | None, date | None]:
+    def _usd_by_end(self, facts: dict[str, Any], tag: str) -> dict[date, float]:
         units = facts.get("facts", {}).get("us-gaap", {}).get(tag, {}).get("units", {})
-        entries = units.get("USD", [])
-        annual = [entry for entry in entries if entry.get("form") in {"10-K", "10-Q"}]
-        if not annual:
+        values: dict[date, float] = {}
+        for entry in units.get("USD", []):
+            if entry.get("form") not in {"10-K", "10-Q"}:
+                continue
+            end, value = entry.get("end"), entry.get("val")
+            if not end or value is None:
+                continue
+            try:
+                values[date.fromisoformat(end)] = value
+            except ValueError:
+                continue
+        return values
+
+    def _latest_usd(self, facts: dict[str, Any], tag: str) -> tuple[float | None, date | None]:
+        by_end = self._usd_by_end(facts, tag)
+        if not by_end:
             return None, None
-        latest = max(annual, key=lambda entry: entry.get("end", ""))
-        return latest.get("val"), date.fromisoformat(latest["end"])
+        latest_end = max(by_end)
+        return by_end[latest_end], latest_end
 
     def get_fundamentals(self, ticker: str, cik: str | None = None) -> Iterator[FactSeed]:
         if not cik:
@@ -84,17 +97,20 @@ class SECProvider:
                 values[metric_key] = latest
 
         operating_income, income_date = values.get("operating_income", (None, None))
-        depreciation, _ = values.get("depreciation", (None, None))
-        if operating_income is not None and depreciation is not None:
-            yield FactSeed(
-                metric_key="ebitda",
-                period="TTM",
-                value=dec(operating_income + depreciation),
-                unit="currency",
-                as_of_date=income_date or date.today(),
-                source=self.name,
-                notes="operating income + depreciation and amortization",
-            )
+        if operating_income is not None and income_date is not None:
+            depreciation = self._usd_by_end(
+                facts, "DepreciationDepletionAndAmortization"
+            ).get(income_date)
+            if depreciation is not None:
+                yield FactSeed(
+                    metric_key="ebitda",
+                    period="TTM",
+                    value=dec(operating_income + depreciation),
+                    unit="currency",
+                    as_of_date=income_date,
+                    source=self.name,
+                    notes="operating income + depreciation and amortization",
+                )
 
         for metric_key in ("revenue", "eps_ttm", "cash_and_equivalents"):
             value, as_of_date = values.get(metric_key, (None, None))

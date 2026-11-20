@@ -155,6 +155,42 @@ def test_sec_adapter_maps_universe_and_derives_ebitda() -> None:
     assert provider.name == "sec"
 
 
+def test_sec_ebitda_requires_matching_periods() -> None:
+    def payload(depreciation_end: str) -> dict[str, Any]:
+        return {
+            "facts": {
+                "us-gaap": {
+                    "OperatingIncomeLoss": {
+                        "units": {
+                            "USD": [{"form": "10-K", "end": "2025-12-31", "val": 100}]
+                        }
+                    },
+                    "DepreciationDepletionAndAmortization": {
+                        "units": {
+                            "USD": [{"form": "10-K", "end": depreciation_end, "val": 20}]
+                        }
+                    },
+                }
+            }
+        }
+
+    mismatched = httpx.Client(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload("2024-12-31")))
+    )
+    assert "ebitda" not in {
+        fact.metric_key for fact in SECProvider(client=mismatched).get_fundamentals("X", "1")
+    }
+
+    matched = httpx.Client(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload("2025-12-31")))
+    )
+    facts = {
+        fact.metric_key: fact
+        for fact in SECProvider(client=matched).get_fundamentals("X", "1")
+    }
+    assert facts["ebitda"].value == Decimal("120")
+
+
 def test_yfinance_adapter_uses_injected_ticker() -> None:
     class FakeTicker:
         info = {
