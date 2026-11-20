@@ -10,7 +10,7 @@ const CompanyPage = lazy(async () => {
 });
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
+  defaultOptions: { queries: { retry: 1 } },
 });
 
 export default function App() {

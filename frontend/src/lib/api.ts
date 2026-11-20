@@ -13,8 +13,14 @@ async function request<T>(path: string, schema: z.ZodType<T>, init?: RequestInit
   const response = await fetch(`${API_BASE}${path}`, init);
   const raw: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const parsed = z.object({ detail: z.string() }).safeParse(raw);
-    throw new ApiError(parsed.success ? parsed.data.detail : `${response.status} request failed`);
+    const parsed = z
+      .object({ detail: z.union([z.string(), z.array(z.unknown())]) })
+      .safeParse(raw);
+    if (!parsed.success) throw new ApiError(`${response.status} request failed`);
+    const detail = parsed.data.detail;
+    throw new ApiError(
+      typeof detail === 'string' ? detail : detail.map((item) => JSON.stringify(item)).join('; '),
+    );
   }
   return schema.parse(raw);
 }

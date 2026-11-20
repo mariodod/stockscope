@@ -35,8 +35,6 @@ export const pagedCompaniesSchema = z.object({
   offset: z.number(),
   items: z.array(companySummarySchema),
 });
-export type PagedCompanies = z.infer<typeof pagedCompaniesSchema>;
-
 const datedMetricSchema = z.object({
   metric_key: z.string(),
   label: z.string(),
@@ -68,8 +66,6 @@ export const companyDetailSchema = z.object({
   latest_metrics: z.array(datedMetricSchema),
   history: z.array(factPointSchema),
 });
-export type CompanyDetail = z.infer<typeof companyDetailSchema>;
-export type FactPoint = z.infer<typeof factPointSchema>;
 
 export const sectorCountsSchema = z.object({
   sectors: z.array(z.string()),
@@ -106,7 +102,6 @@ export const sortSpecSchema = z.object({
   metric: z.string(),
   dir: z.enum(['asc', 'desc']),
 });
-export type SortSpec = z.infer<typeof sortSpecSchema>;
 
 export const metricCoverageSchema = z.object({
   key: z.string(),
@@ -132,7 +127,6 @@ export const dataQualitySchema = z.object({
     }),
   ),
 });
-export type DataQualityReport = z.infer<typeof dataQualitySchema>;
 
 export const screenRequestSchema = z.object({
   filters: z.array(filterConditionSchema),

@@ -1,11 +1,6 @@
 import { z } from 'zod';
 
-import {
-  filterConditionSchema,
-  screenRequestSchema,
-  sortSpecSchema,
-  type ScreenRequest,
-} from './schemas';
+import { filterConditionSchema, sortSpecSchema, type ScreenRequest } from './schemas';
 
 export const screenStateSchema = z.object({
   filters: z.array(filterConditionSchema),
@@ -40,12 +35,13 @@ export function writeState(state: ScreenState): string {
 }
 
 export function stateToRequest(state: ScreenState, columns: string[] = []): ScreenRequest {
-  return screenRequestSchema.parse({
+  const request: ScreenRequest = {
     filters: state.filters,
     sort: state.sort,
     columns,
     ranking: Object.keys(state.weights).length > 0 ? { weights: state.weights } : null,
     limit: state.limit,
     offset: state.offset,
-  });
+  };
+  return request;
 }

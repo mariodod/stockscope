@@ -37,7 +37,6 @@ export function useDataQuality() {
   return useQuery({
     queryKey: ['data-quality'],
     queryFn: () => apiGet('/api/v1/data-quality', dataQualitySchema),
-    staleTime: 300_000,
   });
 }
 
