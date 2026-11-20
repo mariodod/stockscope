@@ -20,25 +20,27 @@ QUOTE_COLUMNS = {
     "fifty_two_week_low": Quote.fifty_two_week_low,
     "avg_volume": Quote.volume,
 }
+QUOTE_KEYS = tuple(QUOTE_COLUMNS)
 
 
-def validate_metric_keys(session: Session, keys: set[str]) -> set[str]:
+def validate_metric_keys(session: Session, keys: set[str]) -> None:
     """Reject metric names that are not in the registry or company columns."""
     known = set(session.scalars(select(MetricDefinition.key)).all()) | set(DESCRIPTIVE_KEYS)
     unknown = keys - known
     if unknown:
         raise ValueError(f"Unknown metric keys: {', '.join(sorted(unknown))}")
-    return known
 
 
-def _latest_facts() -> Select[Any]:
-    """Latest fact per company and metric, ordered by date then recency."""
-    ranked = select(
+def _ranked_facts() -> Any:
+    """Facts ranked newest-first per company and metric."""
+    return select(
         FundamentalFact.company_id.label("company_id"),
         FundamentalFact.metric_key.label("metric_key"),
+        FundamentalFact.period.label("period"),
         FundamentalFact.value.label("value"),
+        FundamentalFact.unit.label("unit"),
+        FundamentalFact.source.label("source"),
         FundamentalFact.as_of_date.label("as_of_date"),
-        literal(1).label("precedence"),
         func.row_number()
         .over(
             partition_by=[FundamentalFact.company_id, FundamentalFact.metric_key],
@@ -50,12 +52,17 @@ def _latest_facts() -> Select[Any]:
         )
         .label("rn"),
     ).subquery()
+
+
+def _latest_facts() -> Select[Any]:
+    """Latest fact per company and metric, with quote precedence marker."""
+    ranked = _ranked_facts()
     return select(
         ranked.c.company_id,
         ranked.c.metric_key,
         ranked.c.value,
         ranked.c.as_of_date,
-        ranked.c.precedence,
+        literal(1).label("precedence"),
     ).where(ranked.c.rn == 1)
 
 
@@ -115,25 +122,7 @@ def latest_metric_pivot(keys: set[str]) -> Subquery:
 
 def latest_fact_rows(session: Session, company_id: int) -> list[dict[str, Any]]:
     """Latest fact per metric for a company, with provenance."""
-    ranked = select(
-        FundamentalFact.company_id.label("company_id"),
-        FundamentalFact.metric_key.label("metric_key"),
-        FundamentalFact.period.label("period"),
-        FundamentalFact.value.label("value"),
-        FundamentalFact.unit.label("unit"),
-        FundamentalFact.source.label("source"),
-        FundamentalFact.as_of_date.label("as_of_date"),
-        func.row_number()
-        .over(
-            partition_by=[FundamentalFact.company_id, FundamentalFact.metric_key],
-            order_by=[
-                FundamentalFact.as_of_date.desc(),
-                FundamentalFact.filed_at.desc(),
-                FundamentalFact.id.desc(),
-            ],
-        )
-        .label("rn"),
-    ).subquery()
+    ranked = _ranked_facts()
     rows = session.execute(
         select(ranked).where(ranked.c.rn == 1, ranked.c.company_id == company_id)
     ).mappings()
@@ -149,16 +138,10 @@ def latest_quote_row(session: Session, company_id: int) -> dict[str, Any] | None
     ).scalar_one_or_none()
     if row is None:
         return None
-    return {
-        "market_cap": row.market_cap,
-        "pe_ratio": row.pe_ratio,
-        "price": row.price,
-        "fifty_two_week_high": row.fifty_two_week_high,
-        "fifty_two_week_low": row.fifty_two_week_low,
-        "avg_volume": row.volume,
-        "source": row.source,
-        "as_of_date": row.date,
-    }
+    values = {key: getattr(row, QUOTE_COLUMNS[key].key) for key in QUOTE_KEYS}
+    values["source"] = row.source
+    values["as_of_date"] = row.date
+    return values
 
 
 def fact_history(session: Session, company_id: int) -> list[dict[str, Any]]:

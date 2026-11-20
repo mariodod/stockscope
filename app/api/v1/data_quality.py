@@ -1,9 +1,9 @@
 """Data coverage and staleness report."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.deps import DbSession
 from app.cache import api_cache
@@ -22,7 +22,7 @@ def data_quality(db: DbSession) -> DataQualityReport:
 
 
 def _build_report(db: DbSession) -> DataQualityReport:
-    total = len(db.scalars(select(Company.id)).all())
+    total = db.scalar(select(func.count()).select_from(Company)) or 0
     cutoff = datetime.now(UTC).date() - timedelta(days=settings.stale_after_days)
 
     coverage: list[MetricCoverage] = []
@@ -35,28 +35,28 @@ def _build_report(db: DbSession) -> DataQualityReport:
                 FundamentalFact.metric_key == definition.key
             )
         ).all()
-        company_ids = {row[0] for row in fact_rows}
-        dates = [row[1] for row in fact_rows]
-        stale = sum(1 for value in dates if value < cutoff)
+        latest_dates: dict[int, date] = {}
+        for company_id, as_of in fact_rows:
+            latest_dates[company_id] = max(latest_dates.get(company_id, as_of), as_of)
 
         quote_column = QUOTE_COLUMNS.get(definition.key)
         if quote_column is not None:
             quote_rows = db.execute(
                 select(Quote.company_id, Quote.date).where(quote_column.is_not(None))
             ).all()
-            company_ids |= {row[0] for row in quote_rows}
-            dates += [row[1] for row in quote_rows]
-            stale += sum(1 for value in quote_rows if value[1] < cutoff)
+            for company_id, day in quote_rows:
+                latest_dates[company_id] = max(latest_dates.get(company_id, day), day)
 
+        stale = sum(1 for day in latest_dates.values() if day < cutoff)
         coverage.append(
             MetricCoverage(
                 key=definition.key,
                 label=definition.label,
                 total_companies=total,
-                companies_with_value=len(company_ids),
-                coverage_pct=round(100 * len(company_ids) / total, 1) if total else 0.0,
+                companies_with_value=len(latest_dates),
+                coverage_pct=round(100 * len(latest_dates) / total, 1) if total else 0.0,
                 stale_count=stale,
-                latest_as_of=max(dates) if dates else None,
+                latest_as_of=max(latest_dates.values()) if latest_dates else None,
             )
         )
 

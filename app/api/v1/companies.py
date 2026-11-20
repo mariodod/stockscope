@@ -19,6 +19,7 @@ from app.schemas.screen import (
     SortSpec,
 )
 from app.services.metrics import (
+    QUOTE_KEYS,
     fact_history,
     latest_fact_rows,
     latest_quote_row,
@@ -60,30 +61,28 @@ def get_company(ticker: str, db: DbSession) -> CompanyDetail:
         raise HTTPException(status_code=404, detail=f"Unknown ticker: {ticker}")
 
     labels = metric_labels(db)
-    latest: list[LatestMetric] = []
+    latest: dict[str, LatestMetric] = {}
     for row in latest_fact_rows(db, company.id):
         key = row["metric_key"]
         label, unit, direction = labels.get(key, (key, row["unit"], None))
-        latest.append(
-            LatestMetric(
-                metric_key=key,
-                label=label,
-                value=row["value"],
-                unit=unit,
-                direction=direction,
-                period=row["period"],
-                source=row["source"],
-                as_of_date=row["as_of_date"],
-            )
+        latest[key] = LatestMetric(
+            metric_key=key,
+            label=label,
+            value=row["value"],
+            unit=unit,
+            direction=direction,
+            period=row["period"],
+            source=row["source"],
+            as_of_date=row["as_of_date"],
         )
 
     quote = latest_quote_row(db, company.id)
     if quote is not None:
-        for key in ("market_cap", "pe_ratio", "price", "fifty_two_week_high", "fifty_two_week_low"):
+        for key in QUOTE_KEYS:
             if quote.get(key) is None:
                 continue
             label, unit, direction = labels.get(key, (key, "currency", None))
-            item = LatestMetric(
+            latest[key] = LatestMetric(
                 metric_key=key,
                 label=label,
                 value=quote[key],
@@ -93,14 +92,6 @@ def get_company(ticker: str, db: DbSession) -> CompanyDetail:
                 source=quote["source"],
                 as_of_date=quote["as_of_date"],
             )
-            existing_index = next(
-                (index for index, metric in enumerate(latest) if metric.metric_key == key),
-                None,
-            )
-            if existing_index is None:
-                latest.append(item)
-            else:
-                latest[existing_index] = item
 
     history = [FactPoint(**row) for row in fact_history(db, company.id)]
     return CompanyDetail(
@@ -112,7 +103,7 @@ def get_company(ticker: str, db: DbSession) -> CompanyDetail:
         industry=company.industry,
         country=company.country,
         currency=company.currency,
-        latest_metrics=latest,
+        latest_metrics=list(latest.values()),
         history=history,
     )
 

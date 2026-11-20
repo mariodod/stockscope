@@ -42,7 +42,13 @@ def fetch_json(
     for attempt in range(3):
         if limiter is not None:
             limiter.wait()
-        response = client.get(url, params=params, headers=headers)
+        try:
+            response = client.get(url, params=params, headers=headers)
+        except httpx.RequestError as exc:
+            if attempt < 2:
+                time.sleep(0.1 * 2**attempt)
+                continue
+            raise ProviderHttpError(f"transport error from {url}: {exc}") from exc
         if response.status_code in RETRYABLE:
             if attempt < 2:
                 time.sleep(0.1 * 2**attempt)

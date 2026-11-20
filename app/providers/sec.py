@@ -59,27 +59,57 @@ class SECProvider:
     def get_quote(self, ticker: str) -> None:
         return None
 
-    def _usd_by_end(self, facts: dict[str, Any], tag: str) -> dict[date, float]:
+    def _entries(
+        self, facts: dict[str, Any], tag: str, unit: str = "USD"
+    ) -> list[tuple[date | None, date, date | None, float]]:
         units = facts.get("facts", {}).get("us-gaap", {}).get(tag, {}).get("units", {})
-        values: dict[date, float] = {}
-        for entry in units.get("USD", []):
-            if entry.get("form") not in {"10-K", "10-Q"}:
-                continue
-            end, value = entry.get("end"), entry.get("val")
-            if not end or value is None:
+        entries: list[tuple[date | None, date, date | None, float]] = []
+        for entry in units.get(unit, []):
+            if entry.get("form") not in {"10-K", "10-Q"} or entry.get("val") is None:
                 continue
             try:
-                values[date.fromisoformat(end)] = value
-            except ValueError:
+                end = date.fromisoformat(entry["end"])
+            except (KeyError, ValueError, TypeError):
                 continue
-        return values
+            start = None
+            if entry.get("start"):
+                try:
+                    start = date.fromisoformat(entry["start"])
+                except ValueError:
+                    start = None
+            filed = None
+            if entry.get("filed"):
+                try:
+                    filed = date.fromisoformat(entry["filed"])
+                except ValueError:
+                    filed = None
+            entries.append((start, end, filed, entry["val"]))
+        return entries
 
-    def _latest_usd(self, facts: dict[str, Any], tag: str) -> tuple[float | None, date | None]:
-        by_end = self._usd_by_end(facts, tag)
-        if not by_end:
-            return None, None
-        latest_end = max(by_end)
-        return by_end[latest_end], latest_end
+    def _select(
+        self, entries: list[tuple[date | None, date, date | None, float]]
+    ) -> tuple[date | None, date, date | None, float]:
+        return max(
+            entries,
+            key=lambda entry: (
+                entry[1],
+                (entry[1] - entry[0]).days if entry[0] else 0,
+                entry[2] or date.min,
+            ),
+        )
+
+    @staticmethod
+    def _period(start: date | None, end: date) -> str:
+        return "FY" if start is not None and (end - start).days >= 300 else "Q"
+
+    def _latest(
+        self, facts: dict[str, Any], tag: str, unit: str = "USD"
+    ) -> tuple[float | None, date | None, str | None]:
+        entries = self._entries(facts, tag, unit)
+        if not entries:
+            return None, None, None
+        start, end, _, value = self._select(entries)
+        return value, end, self._period(start, end)
 
     def get_fundamentals(self, ticker: str, cik: str | None = None) -> Iterator[FactSeed]:
         if not cik:
@@ -90,35 +120,40 @@ class SECProvider:
             headers=self._headers(),
             limiter=self.limiter,
         )
-        values: dict[str, tuple[float | None, date | None]] = {}
+        values: dict[str, tuple[float | None, date | None, str | None]] = {}
         for tag, (metric_key, _unit) in TAG_MAP.items():
-            latest = self._latest_usd(facts, tag)
+            unit = "USD/shares" if metric_key == "eps_ttm" else "USD"
+            latest = self._latest(facts, tag, unit)
             if latest[0] is not None:
                 values[metric_key] = latest
 
-        operating_income, income_date = values.get("operating_income", (None, None))
-        if operating_income is not None and income_date is not None:
-            depreciation = self._usd_by_end(
-                facts, "DepreciationDepletionAndAmortization"
-            ).get(income_date)
-            if depreciation is not None:
+        operating_entries = self._entries(facts, "OperatingIncomeLoss")
+        if operating_entries:
+            start, end, _, operating_income = self._select(operating_entries)
+            depreciation_entries = [
+                entry
+                for entry in self._entries(facts, "DepreciationDepletionAndAmortization")
+                if entry[0] == start and entry[1] == end
+            ]
+            if depreciation_entries:
+                depreciation = self._select(depreciation_entries)[3]
                 yield FactSeed(
                     metric_key="ebitda",
-                    period="TTM",
+                    period=self._period(start, end),
                     value=dec(operating_income + depreciation),
                     unit="currency",
-                    as_of_date=income_date,
+                    as_of_date=end,
                     source=self.name,
                     notes="operating income + depreciation and amortization",
                 )
 
         for metric_key in ("revenue", "eps_ttm", "cash_and_equivalents"):
-            value, as_of_date = values.get(metric_key, (None, None))
+            value, as_of_date, period = values.get(metric_key, (None, None, None))
             if value is None:
                 continue
             yield FactSeed(
                 metric_key=metric_key,
-                period="TTM",
+                period=period or "FY",
                 value=dec(value),
                 unit="currency",
                 as_of_date=as_of_date or date.today(),

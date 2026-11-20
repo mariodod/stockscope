@@ -1,6 +1,6 @@
 """End-to-end screening API tests against seeded fixture data."""
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -225,6 +225,40 @@ def test_data_quality_reports_coverage_and_staleness(
     assert pe["companies_with_value"] == 3
     assert pe["coverage_pct"] == 75.0
     assert pe["stale_count"] > 0
+
+
+def test_staleness_counts_companies_not_history_rows(
+    client: TestClient, db_session: Session
+) -> None:
+    seed_metrics(db_session)
+    company = Company(ticker="FRESH", name="Fresh")
+    db_session.add(company)
+    db_session.flush()
+    old = date.today() - timedelta(days=200)
+    for index in range(99):
+        db_session.add(
+            Quote(
+                company_id=company.id,
+                date=old - timedelta(days=index),
+                pe_ratio=Decimal("20"),
+                source="old",
+            )
+        )
+    db_session.add(
+        Quote(
+            company_id=company.id,
+            date=date.today(),
+            pe_ratio=Decimal("15"),
+            source="fresh",
+        )
+    )
+    db_session.commit()
+
+    body = client.get("/api/v1/data-quality").json()
+    pe = next(metric for metric in body["metrics"] if metric["key"] == "pe_ratio")
+
+    assert pe["companies_with_value"] == 1
+    assert pe["stale_count"] == 0
 
 
 def test_company_detail_and_sectors(client: TestClient, db_session: Session) -> None:

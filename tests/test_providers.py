@@ -87,6 +87,35 @@ def test_fetch_json_retries_server_errors(monkeypatch: Any) -> None:
     assert slept == [0.1]
 
 
+def test_fetch_json_retries_transport_errors(monkeypatch: Any) -> None:
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise httpx.ConnectError("flaky connection")
+        return httpx.Response(200, json={"ok": True})
+
+    monkeypatch.setattr("app.providers.http.time.sleep", lambda seconds: None)
+
+    assert fetch_json(_client(handler), "/flaky") == {"ok": True}
+    assert calls["n"] == 3
+
+
+def test_fetch_json_raises_provider_error_on_transport_failure(monkeypatch: Any) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("down")
+
+    monkeypatch.setattr("app.providers.http.time.sleep", lambda seconds: None)
+
+    try:
+        fetch_json(_client(handler), "/down")
+    except ProviderHttpError:
+        assert True
+    else:
+        raise AssertionError("expected ProviderHttpError")
+
+
 def test_fetch_json_raises_after_retries(monkeypatch: Any) -> None:
     monkeypatch.setattr("app.providers.http.time.sleep", lambda seconds: None)
 
@@ -189,6 +218,78 @@ def test_sec_ebitda_requires_matching_periods() -> None:
         for fact in SECProvider(client=matched).get_fundamentals("X", "1")
     }
     assert facts["ebitda"].value == Decimal("120")
+
+
+def test_sec_reads_per_share_eps() -> None:
+    payload = {
+        "facts": {
+            "us-gaap": {
+                "EarningsPerShareDiluted": {
+                    "units": {
+                        "USD/shares": [
+                            {
+                                "form": "10-K",
+                                "start": "2025-01-01",
+                                "end": "2025-12-31",
+                                "val": 6.5,
+                                "filed": "2026-02-01",
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload))
+    )
+
+    facts = {
+        fact.metric_key: fact
+        for fact in SECProvider(client=client).get_fundamentals("X", "1")
+    }
+
+    assert facts["eps_ttm"].value == Decimal("6.5")
+    assert facts["eps_ttm"].period == "FY"
+
+
+def test_sec_ebitda_matches_reporting_duration() -> None:
+    def entry(start: str, val: int, filed: str) -> dict[str, Any]:
+        return {"form": "10-K", "start": start, "end": "2025-03-31", "val": val, "filed": filed}
+
+    payload = {
+        "facts": {
+            "us-gaap": {
+                "OperatingIncomeLoss": {
+                    "units": {
+                        "USD": [
+                            entry("2025-01-01", 30, "2025-05-02"),
+                            entry("2024-04-01", 120, "2025-05-01"),
+                        ]
+                    }
+                },
+                "DepreciationDepletionAndAmortization": {
+                    "units": {
+                        "USD": [
+                            entry("2024-04-01", 25, "2025-05-01"),
+                            entry("2025-01-01", 5, "2025-05-02"),
+                        ]
+                    }
+                },
+            }
+        }
+    }
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload))
+    )
+
+    facts = {
+        fact.metric_key: fact
+        for fact in SECProvider(client=client).get_fundamentals("X", "1")
+    }
+
+    assert facts["ebitda"].value == Decimal("145")
+    assert facts["ebitda"].period == "FY"
 
 
 def test_yfinance_adapter_uses_injected_ticker() -> None:
