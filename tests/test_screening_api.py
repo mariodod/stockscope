@@ -209,6 +209,7 @@ def test_non_finite_weights_are_rejected(client: TestClient, db_session: Session
     )
 
     assert response.status_code == 422
+    assert "input" not in response.json()["detail"][0]
 
 
 def test_data_quality_reports_coverage_and_staleness(

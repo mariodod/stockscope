@@ -1,8 +1,6 @@
 """Stockscope API entrypoint."""
 
 import logging
-import math
-from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -28,30 +26,14 @@ app.include_router(v1_router)
 app.add_middleware(RequestLoggingMiddleware)
 
 
-def _json_safe(value: Any) -> Any:
-    """Replace non-finite floats so validation errors remain JSON serializable."""
-    if isinstance(value, float) and not math.isfinite(value):
-        return str(value)
-    if isinstance(value, dict):
-        return {key: _json_safe(item) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_json_safe(item) for item in value]
-    return value
-
-
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    detail = []
-    for error in exc.errors():
-        detail.append(
-            {
-                key: _json_safe(value)
-                for key, value in error.items()
-                if key in {"loc", "msg", "type", "input"}
-            }
-        )
+    detail = [
+        {key: value for key, value in error.items() if key in {"loc", "msg", "type"}}
+        for error in exc.errors()
+    ]
     return JSONResponse(status_code=422, content={"detail": detail})
 
 
@@ -62,7 +44,8 @@ async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse
 
 @app.exception_handler(Exception)
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
-    logging.getLogger("stockscope").exception(
-        "unhandled error method=%s path=%s", request.method, request.url.path
+    request_id = getattr(request.state, "request_id", None)
+    headers = {"X-Request-ID": request_id} if request_id else None
+    return JSONResponse(
+        status_code=500, content={"detail": "Internal server error"}, headers=headers
     )
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
