@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import select
 
 from app.api.deps import DbSession
+from app.cache import api_cache
 from app.models import Company
 from app.schemas.screen import (
     CompanyDetail,
@@ -121,16 +122,22 @@ def get_company(ticker: str, db: DbSession) -> CompanyDetail:
 
 @router.get("/sectors", response_model=SectorCounts)
 def list_sectors(db: DbSession) -> SectorCounts:
-    sectors = db.scalars(
-        select(Company.sector).where(Company.sector.is_not(None)).distinct().order_by(Company.sector)
-    ).all()
-    industries = db.scalars(
-        select(Company.industry)
-        .where(Company.industry.is_not(None))
-        .distinct()
-        .order_by(Company.industry)
-    ).all()
-    return SectorCounts(
-        sectors=[value for value in sectors if value],
-        industries=[value for value in industries if value],
-    )
+    def load() -> SectorCounts:
+        sectors = db.scalars(
+            select(Company.sector)
+            .where(Company.sector.is_not(None))
+            .distinct()
+            .order_by(Company.sector)
+        ).all()
+        industries = db.scalars(
+            select(Company.industry)
+            .where(Company.industry.is_not(None))
+            .distinct()
+            .order_by(Company.industry)
+        ).all()
+        return SectorCounts(
+            sectors=[value for value in sectors if value],
+            industries=[value for value in industries if value],
+        )
+
+    return api_cache.get_or_set("sectors", load)

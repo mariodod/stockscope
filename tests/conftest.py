@@ -8,6 +8,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.cache import api_cache
 from app.db.base import Base
 from app.db.session import enable_sqlite_foreign_keys, get_db
 from app.main import app
@@ -18,6 +19,11 @@ from app.models import (  # noqa: F401 - register tables on Base.metadata
     Quote,
     RefreshRun,
 )
+
+
+@pytest.fixture(autouse=True)
+def clear_api_cache() -> None:
+    api_cache.clear()
 
 
 @pytest.fixture
