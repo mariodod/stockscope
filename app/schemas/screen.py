@@ -1,5 +1,6 @@
 """Request and response models for the screener."""
 
+import math
 from enum import StrEnum
 from typing import Any
 
@@ -58,6 +59,8 @@ class RankingSpec(BaseModel):
     def normalize_weights(cls, value: dict[str, float]) -> dict[str, float]:
         if not value:
             return value
+        if any(not math.isfinite(weight) for weight in value.values()):
+            raise ValueError("weights must be finite numbers")
         if any(weight < 0 for weight in value.values()):
             raise ValueError("weights must not be negative")
         total = sum(value.values())

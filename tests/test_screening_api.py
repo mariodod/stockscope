@@ -199,6 +199,17 @@ def test_unknown_metric_is_rejected(client: TestClient, db_session: Session) -> 
     assert "Unknown metric keys" in response.json()["detail"]
 
 
+def test_non_finite_weights_are_rejected(client: TestClient, db_session: Session) -> None:
+    _seed(db_session)
+
+    response = client.post(
+        "/api/v1/screen",
+        json={"ranking": {"weights": {"pe_ratio": float("nan")}}},
+    )
+
+    assert response.status_code == 422
+
+
 def test_company_detail_and_sectors(client: TestClient, db_session: Session) -> None:
     _seed(db_session)
 
