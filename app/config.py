@@ -16,7 +16,6 @@ class Settings(BaseSettings):
     app_env: str = "dev"
     log_level: str = "INFO"
     database_url: str = "sqlite:///./stockscope.db"
-    admin_token: str = ""
     stale_after_days: int = 90
     fmp_api_key: str = ""
     sec_user_agent: str = "Stockscope research contact@example.com"

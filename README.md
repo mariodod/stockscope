@@ -2,7 +2,7 @@
 
 A stock screening and analysis platform for publicly listed companies. It pulls fundamentals and quotes from free data providers, stores them in a local database, and exposes them through a fast, filterable web dashboard.
 
-> **Status: M1 foundation complete.** The roadmap lives in [PLAN.md](PLAN.md). Design decisions and reference material live in [docs/](docs/). Tracked work is in the [GitHub milestones and issues](https://github.com/mariodod/stockscope/issues).
+> **Status: M1–M4 complete; M5 hardening in progress.** The roadmap lives in [PLAN.md](PLAN.md). Design decisions and reference material live in [docs/](docs/). Tracked work is in the [GitHub milestones and issues](https://github.com/mariodod/stockscope/issues).
 
 ## What it will do
 
@@ -51,6 +51,14 @@ uvicorn app.main:app --reload        # API: http://localhost:8000/docs
 
 For a zero-dependency local run, skip Docker and the `.env` edit: the default `DATABASE_URL` is SQLite and creates `./stockscope.db`.
 
+### Full stack in containers
+
+```bash
+docker compose up --build -d
+```
+
+This starts PostgreSQL, the API (which runs migrations and seeds metrics on boot), the React dashboard behind nginx at **http://localhost:8080**, and the APScheduler worker. The API is also exposed directly on port 8000. Stop everything with `docker compose down`.
+
 ## Web dashboard (M4)
 
 The dashboard lives in `frontend/` and uses React, TypeScript, TanStack Table/Query, Tailwind CSS and Recharts. All API responses are validated with Zod at the boundary.
@@ -97,6 +105,7 @@ Adapter tests use recorded-style payloads and run in CI without live API calls.
 | `POST` | `/api/v1/screen` | Structured filters, sorting, and composite ranking |
 | `GET` | `/api/v1/companies/{ticker}` | Company detail with latest metrics and history |
 | `GET` | `/api/v1/sectors` | Distinct sectors and industries for filter dropdowns |
+| `GET` | `/api/v1/data-quality` | Metric coverage, staleness and latest refresh runs |
 | `GET` | `/docs` | Interactive OpenAPI documentation |
 
 Example screen request:
@@ -117,7 +126,7 @@ Example screen request:
 
 Filters are whitelisted against the metric registry and compiled into parameterized SQL. Composite scores are weighted sums of percentile ranks, oriented by each metric's direction; missing values score neutrally and are listed in `missing_metrics`. Results are tie-broken by ticker so repeated screens return the same order.
 
-A screen with five filters, three sort keys and composite ranking over 10,400 seeded companies (52,000 facts) completed in **0.399s** locally.
+Run the reproducible benchmark with `python scripts/benchmark_screen.py`. A screen with three filters, three sort keys and composite ranking over 10,400 seeded companies (41,600 facts) completed in **0.848s** locally.
 
 ## Quality gates
 
@@ -127,7 +136,16 @@ mypy app           # strict type checking
 pytest             # tests
 ```
 
-CI runs all three plus a migration/seed check on every push and pull request.
+For the frontend, run `npm --prefix frontend test`, `npm --prefix frontend lint` and `npm --prefix frontend build`. CI runs both backend and frontend jobs on every push and pull request.
+
+## Known limitations
+
+- Coverage is **US-listed companies only**. The schema supports a `country`/`exchange` field for future global expansion, but no non-US provider is wired in.
+- The FMP quote adapter is covered by fixture tests; a live quote sync needs an `FMP_API_KEY` and was not verified in CI.
+- `avg_volume` currently stores a single quote's daily volume, not a multi-day average.
+- Free providers can be delayed, rate-limited or incomplete. The `/data-quality` endpoint and dashboard badges expose coverage and staleness, but data accuracy still needs verification against primary sources.
+- Caching is in-memory and per process; a multi-process deployment would need a shared cache.
+- No user accounts or write endpoints; the API is read-only apart from CLI-driven ingestion.
 
 ## Disclaimer
 

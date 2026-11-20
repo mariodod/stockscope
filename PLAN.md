@@ -297,7 +297,10 @@ Each milestone ends in a verifiable state. Acceptance criteria are checked befor
 | 2026-11-19 | Use `uvicorn` without the `standard` extra | Its PyYAML dependency has no Python 3.15 wheel and requires a C compiler locally; the extra is not needed |
 | 2026-11-19 | SEC `company_tickers.json` is the primary universe source | Free and needs no key; live sync produced 10,400 US listings |
 | 2026-11-19 | Only the first ticker keeps a CIK when share classes share one | SEC lists GOOG and GOOGL under the same CIK, which violates the unique constraint |
-| 2026-11-19 | Screening pivots latest facts in SQL, then ranks in Python | Keeps the tall fact table; 10,400 companies x 52,000 facts screened in 0.399s |
+| 2026-11-19 | Screening pivots latest facts in SQL, then ranks in Python | Keeps the tall fact table; benchmarked in `scripts/benchmark_screen.py` |
+| 2026-11-20 | Latest values are chosen by as-of date with quote precedence | Numeric `max()` picked stale, larger values and disagreed with company detail |
+| 2026-11-20 | Read-only API responses use an in-process TTL cache | Metrics, sectors and data-quality change rarely; no extra service needed |
+| 2026-11-20 | Scheduler runs as a separate long-lived process | `BackgroundScheduler` is a daemon and cannot keep the API process alive on its own |
 
 ## 15. Open questions (revisit before M2)
 
