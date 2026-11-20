@@ -79,12 +79,10 @@ Providers sit behind a common interface (`app/providers/base.py`) so a source ca
 
 Use `--job all` to run every job. Each run writes a `RefreshRun` row with its status and row count. Jobs upsert on natural keys, so rerunning them does not create duplicates.
 
-To run the refresh jobs on a schedule, start the APScheduler worker:
+To run the refresh jobs on a schedule, start the APScheduler worker as a long-lived process (cron expressions come from `.env`):
 
-```python
-from app.worker.scheduler import start_scheduler
-
-scheduler = start_scheduler()  # cron expressions come from .env
+```bash
+python -m app.worker
 ```
 
 Adapter tests use recorded-style payloads and run in CI without live API calls.
