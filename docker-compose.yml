@@ -16,5 +16,44 @@ services:
       timeout: 5s
       retries: 10
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stockscope-api
+    environment:
+      DATABASE_URL: postgresql+psycopg://stockscope:stockscope@db:5432/stockscope
+      APP_ENV: prod
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stockscope-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stockscope-worker
+    environment:
+      DATABASE_URL: postgresql+psycopg://stockscope:stockscope@db:5432/stockscope
+      APP_ENV: prod
+      LOG_LEVEL: INFO
+    command: python -m app.worker
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   stockscope-db-data:
