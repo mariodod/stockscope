@@ -38,10 +38,8 @@ class FactSeed:
     value: Decimal | None
     unit: str
     as_of_date: date
-    fiscal_year: int | None = None
     filed_at: datetime | None = None
     source: str = ""
-    notes: str | None = None
 
 
 class Provider(Protocol):

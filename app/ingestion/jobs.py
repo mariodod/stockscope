@@ -122,11 +122,8 @@ def refresh_quotes(
     return written
 
 
-def refresh_fundamentals(
-    session: Session, provider: Provider, tickers: list[str], as_of: date | None = None
-) -> int:
+def refresh_fundamentals(session: Session, provider: Provider, tickers: list[str]) -> int:
     """Upsert facts on (company, metric, period, source); skip unknown metric keys."""
-    del as_of  # as-of dates come from the provider facts themselves
     valid_keys = set(session.scalars(select(MetricDefinition.key)).all())
     companies = _companies(session)
     existing = {
@@ -156,9 +153,7 @@ def refresh_fundamentals(
             fact.value = seed.value
             fact.unit = seed.unit
             fact.as_of_date = seed.as_of_date
-            fact.fiscal_year = seed.fiscal_year
             fact.filed_at = seed.filed_at
-            fact.notes = seed.notes
             written += 1
     session.commit()
     return written

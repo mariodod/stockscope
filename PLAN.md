@@ -120,8 +120,8 @@ stockscope/
 
 | Entity | Key fields | Notes |
 | --- | --- | --- |
-| `Company` | id, ticker (unique), cik, name, exchange, sector, industry, country, currency, is_active, listed_at | The central entity; `country` enables global expansion |
-| `FundamentalFact` | company_id, metric_key, period, fiscal_year, value, unit, source, as_of_date, filed_at | Long/tall table so new metrics need no schema change; unique constraint on (company, metric, period, source) |
+| `Company` | id, ticker (unique), cik, name, exchange, sector, industry, country, currency, is_active | The central entity; `country` enables global expansion |
+| `FundamentalFact` | company_id, metric_key, period, value, unit, source, as_of_date, filed_at | Long/tall table so new metrics need no schema change; unique constraint on (company, metric, period, source) |
 | `Quote` | company_id, date, price, market_cap, pe_ratio, volume, fifty_two_week_high/low | Time-series of daily market data |
 | `MetricDefinition` | key, label, category, unit, direction, source/formula, description | Drives UI columns, filters, and documentation from one place |
 | `RefreshRun` | id, job, provider, started_at, finished_at, status, rows_written, error | Observability into ingestion; makes failures debuggable |

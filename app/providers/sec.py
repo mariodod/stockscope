@@ -144,7 +144,6 @@ class SECProvider:
                     unit="currency",
                     as_of_date=end,
                     source=self.name,
-                    notes="operating income + depreciation and amortization",
                 )
 
         for metric_key in ("revenue", "eps_ttm", "cash_and_equivalents"):

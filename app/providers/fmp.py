@@ -98,6 +98,5 @@ class FMPProvider:
                 value=value,
                 unit=unit,
                 as_of_date=as_of_date,
-                fiscal_year=whole(row.get("calendarYear")),
                 source=self.name,
             )

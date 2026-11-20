@@ -12,7 +12,6 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
-    Text,
     UniqueConstraint,
     func,
 )
@@ -42,13 +41,11 @@ class FundamentalFact(Base):
         index=True,
     )
     period: Mapped[str] = mapped_column(String(16), nullable=False)
-    fiscal_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     value: Mapped[Decimal | None] = mapped_column(Numeric(24, 6), nullable=True)
     unit: Mapped[str] = mapped_column(String(32), nullable=False)
     source: Mapped[str] = mapped_column(String(64), nullable=False)
     as_of_date: Mapped[date] = mapped_column(Date, nullable=False)
     filed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
