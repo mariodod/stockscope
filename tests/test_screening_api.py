@@ -204,7 +204,8 @@ def test_non_finite_weights_are_rejected(client: TestClient, db_session: Session
 
     response = client.post(
         "/api/v1/screen",
-        json={"ranking": {"weights": {"pe_ratio": float("nan")}}},
+        content=b'{"ranking":{"weights":{"pe_ratio":NaN}}}',
+        headers={"Content-Type": "application/json"},
     )
 
     assert response.status_code == 422
