@@ -155,6 +155,38 @@ def test_missing_values_score_neutrally_and_are_flagged(
     assert delta["score_components"]["revenue_growth_yoy"] == 0.5
 
 
+def test_newer_quote_wins_over_older_fact(client: TestClient, db_session: Session) -> None:
+    seed_metrics(db_session)
+    company = Company(ticker="NEW", name="Newest wins")
+    db_session.add(company)
+    db_session.flush()
+    db_session.add(
+        FundamentalFact(
+            company_id=company.id,
+            metric_key="pe_ratio",
+            period="TTM",
+            value=Decimal("60"),
+            unit="ratio",
+            source="older",
+            as_of_date=date(2026, 1, 1),
+        )
+    )
+    db_session.add(
+        Quote(
+            company_id=company.id,
+            date=date(2026, 1, 2),
+            pe_ratio=Decimal("50"),
+            source="newer",
+        )
+    )
+    db_session.commit()
+
+    body = _screen(client, {"columns": ["pe_ratio"]})
+    item = next(row for row in body["items"] if row["ticker"] == "NEW")
+
+    assert item["metrics"]["pe_ratio"] == "50.000000"
+
+
 def test_unknown_metric_is_rejected(client: TestClient, db_session: Session) -> None:
     _seed(db_session)
 

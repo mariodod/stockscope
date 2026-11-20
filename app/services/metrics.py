@@ -32,10 +32,13 @@ def validate_metric_keys(session: Session, keys: set[str]) -> set[str]:
 
 
 def _latest_facts() -> Select[Any]:
+    """Latest fact per company and metric, ordered by date then recency."""
     ranked = select(
         FundamentalFact.company_id.label("company_id"),
         FundamentalFact.metric_key.label("metric_key"),
         FundamentalFact.value.label("value"),
+        FundamentalFact.as_of_date.label("as_of_date"),
+        literal(1).label("precedence"),
         func.row_number()
         .over(
             partition_by=[FundamentalFact.company_id, FundamentalFact.metric_key],
@@ -47,9 +50,13 @@ def _latest_facts() -> Select[Any]:
         )
         .label("rn"),
     ).subquery()
-    return select(ranked.c.company_id, ranked.c.metric_key, ranked.c.value).where(
-        ranked.c.rn == 1
-    )
+    return select(
+        ranked.c.company_id,
+        ranked.c.metric_key,
+        ranked.c.value,
+        ranked.c.as_of_date,
+        ranked.c.precedence,
+    ).where(ranked.c.rn == 1)
 
 
 def _latest_quote_selects(keys: list[str]) -> list[Select[Any]]:
@@ -58,6 +65,7 @@ def _latest_quote_selects(keys: list[str]) -> list[Select[Any]]:
         return []
     ranked = select(
         Quote.company_id.label("company_id"),
+        Quote.date.label("as_of_date"),
         *[QUOTE_COLUMNS[key].label(f"q{index}") for index, key in enumerate(selected)],
         func.row_number()
         .over(partition_by=Quote.company_id, order_by=Quote.date.desc())
@@ -68,22 +76,40 @@ def _latest_quote_selects(keys: list[str]) -> list[Select[Any]]:
             ranked.c.company_id,
             literal(key).label("metric_key"),
             ranked.c[f"q{index}"].label("value"),
+            ranked.c.as_of_date,
+            literal(2).label("precedence"),
         ).where(ranked.c.rn == 1)
         for index, key in enumerate(selected)
     ]
 
 
 def latest_metric_pivot(keys: set[str]) -> Subquery:
-    """One row per company with a column for each requested non-descriptive metric."""
+    """One row per company with the newest value for each requested metric.
+
+    Quotes outrank facts on the same date. Numeric size is never used to pick a value.
+    """
     metric_keys = sorted(keys - DESCRIPTIVE_KEYS)
-    facts = _latest_facts()
-    values = union_all(facts, *_latest_quote_selects(metric_keys)).subquery("metric_values")
+    values = union_all(_latest_facts(), *_latest_quote_selects(metric_keys)).subquery(
+        "metric_values"
+    )
+    ranked = select(
+        values.c.company_id,
+        values.c.metric_key,
+        values.c.value,
+        func.row_number()
+        .over(
+            partition_by=[values.c.company_id, values.c.metric_key],
+            order_by=[values.c.as_of_date.desc(), values.c.precedence.desc()],
+        )
+        .label("rn"),
+    ).subquery()
+    latest = select(ranked).where(ranked.c.rn == 1).subquery("latest_values")
     columns = [
-        func.max(case((values.c.metric_key == key, values.c.value))).label(key)
+        func.max(case((latest.c.metric_key == key, latest.c.value))).label(key)
         for key in metric_keys
     ]
-    return select(values.c.company_id.label("company_id"), *columns).group_by(
-        values.c.company_id
+    return select(latest.c.company_id.label("company_id"), *columns).group_by(
+        latest.c.company_id
     ).subquery("pivot")
 
 
