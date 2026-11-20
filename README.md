@@ -40,9 +40,9 @@ python -m venv .venv
 # Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
 python -m pip install -e ".[dev]"
 
-docker compose up -d                 # PostgreSQL on localhost:5432
-cp .env.example .env                 # then set DATABASE_URL to:
-# DATABASE_URL=postgresql+psycopg://stockscope:stockscope@localhost:5432/stockscope
+cp .env.example .env                 # set POSTGRES_PASSWORD, then set DATABASE_URL to:
+# DATABASE_URL=postgresql+psycopg://stockscope:<your-password>@localhost:5432/stockscope
+docker compose up -d db              # PostgreSQL on 127.0.0.1:5432
 
 alembic upgrade head                 # create schema
 python -m app.seed.metrics           # load 38 metrics from the packaged catalog
@@ -53,11 +53,13 @@ For a zero-dependency local run, skip Docker and the `.env` edit: the default `D
 
 ### Full stack in containers
 
+Set `POSTGRES_PASSWORD` in `.env` first. `FMP_API_KEY` is optional; without it only the quote job cannot run.
+
 ```bash
 docker compose up --build -d
 ```
 
-This starts PostgreSQL, the API (which runs migrations and seeds metrics on boot), the React dashboard behind nginx at **http://localhost:8080**, and the APScheduler worker. The API is also exposed directly on port 8000. Stop everything with `docker compose down`.
+This starts PostgreSQL (bound to localhost only), the API (which runs migrations and seeds metrics on boot), the React dashboard behind nginx at **http://localhost:8080**, and the APScheduler worker. The API is also exposed directly on port 8000. Stop everything with `docker compose down`.
 
 ## Web dashboard (M4)
 

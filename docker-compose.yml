@@ -4,10 +4,10 @@ services:
     container_name: stockscope-db
     environment:
       POSTGRES_USER: stockscope
-      POSTGRES_PASSWORD: stockscope
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: stockscope
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - stockscope-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -22,9 +22,11 @@ services:
       dockerfile: Dockerfile
     container_name: stockscope-api
     environment:
-      DATABASE_URL: postgresql+psycopg://stockscope:stockscope@db:5432/stockscope
+      DATABASE_URL: postgresql+psycopg://stockscope:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/stockscope
       APP_ENV: prod
       LOG_LEVEL: INFO
+      FMP_API_KEY: ${FMP_API_KEY:-}
+      SEC_USER_AGENT: ${SEC_USER_AGENT:-Stockscope research contact@example.com}
     ports:
       - "8000:8000"
     depends_on:
@@ -47,9 +49,11 @@ services:
       dockerfile: Dockerfile
     container_name: stockscope-worker
     environment:
-      DATABASE_URL: postgresql+psycopg://stockscope:stockscope@db:5432/stockscope
+      DATABASE_URL: postgresql+psycopg://stockscope:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/stockscope
       APP_ENV: prod
       LOG_LEVEL: INFO
+      FMP_API_KEY: ${FMP_API_KEY:-}
+      SEC_USER_AGENT: ${SEC_USER_AGENT:-Stockscope research contact@example.com}
     command: python -m app.worker
     depends_on:
       db:
