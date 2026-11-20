@@ -50,10 +50,7 @@ def list_companies(
         limit=limit,
         offset=offset,
     )
-    try:
-        return screen(db, request)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return screen(db, request)
 
 
 @router.get("/companies/{ticker}", response_model=CompanyDetail)
