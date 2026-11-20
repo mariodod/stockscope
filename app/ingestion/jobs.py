@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Company, FundamentalFact, MetricDefinition, Quote, RefreshRun
-from app.providers.base import Provider
+from app.providers.base import CompanySeed, Provider
 
 
 @contextmanager
@@ -42,11 +42,33 @@ def _companies(session: Session) -> dict[str, Company]:
 def sync_universe(session: Session, provider: Provider, limit: int | None = None) -> int:
     """Insert or update companies from the provider's listed universe."""
     existing = _companies(session)
-    seen_ciks: set[str] = set()
-    written = 0
+    seeds: list[CompanySeed] = []
     for seed in provider.list_companies():
-        if limit is not None and written >= limit:
+        if limit is not None and len(seeds) >= limit:
             break
+        seeds.append(seed)
+
+    # SEC lists share classes (GOOG/GOOGL) under one CIK. Assign each CIK to one ticker,
+    # then clear stale holders before writing so a delisted class cannot block the new one.
+    assignments: dict[str, str | None] = {}
+    claimed: dict[str, str] = {}
+    for seed in seeds:
+        cik = seed.cik
+        if cik is not None:
+            if cik in claimed and claimed[cik] != seed.ticker:
+                cik = None
+            else:
+                claimed[cik] = seed.ticker
+        assignments[seed.ticker] = cik
+
+    for ticker, stale_company in existing.items():
+        cik = stale_company.cik
+        if cik is None or claimed.get(cik) == ticker:
+            continue
+        if assignments.get(ticker) != cik and cik in claimed:
+            stale_company.cik = None
+
+    for seed in seeds:
         company = existing.get(seed.ticker)
         if company is None:
             company = Company(ticker=seed.ticker, name=seed.name)
@@ -54,21 +76,14 @@ def sync_universe(session: Session, provider: Provider, limit: int | None = None
             existing[seed.ticker] = company
         else:
             company.name = seed.name
-        # SEC lists share classes (GOOG/GOOGL) under one CIK; keep the first ticker's link.
-        cik = seed.cik
-        if cik is not None and cik in seen_ciks:
-            cik = None
-        if cik is not None:
-            seen_ciks.add(cik)
-        company.cik = cik
+        company.cik = assignments[seed.ticker]
         company.exchange = seed.exchange
         company.sector = seed.sector
         company.industry = seed.industry
         company.country = seed.country
         company.currency = seed.currency
-        written += 1
     session.commit()
-    return written
+    return len(seeds)
 
 
 def refresh_quotes(

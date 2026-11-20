@@ -114,6 +114,22 @@ def test_shared_ciks_do_not_break_universe_sync(db_session: Session) -> None:
     assert rows == {"GOOGL": "1652044", "GOOG": None}
 
 
+def test_cik_holder_delisting_does_not_break_sync(db_session: Session) -> None:
+    class Feed(FakeProvider):
+        def __init__(self, tickers: list[str]) -> None:
+            self.tickers = tickers
+
+        def list_companies(self) -> Iterator[CompanySeed]:
+            for ticker in self.tickers:
+                yield CompanySeed(ticker=ticker, name=ticker, cik="1652044")
+
+    sync_universe(db_session, Feed(["GOOGL", "GOOG"]))
+    sync_universe(db_session, Feed(["GOOG"]))
+
+    rows = dict(db_session.execute(select(Company.ticker, Company.cik)).all())
+    assert rows == {"GOOGL": None, "GOOG": "1652044"}
+
+
 def test_track_refresh_records_database_failures(db_session: Session) -> None:
     with pytest.raises(IntegrityError), track_refresh(db_session, "universe", "fake"):
         db_session.add(Company(ticker="DUP", name="First"))
