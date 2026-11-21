@@ -49,8 +49,10 @@ def sector_performance(db: Session, days: int) -> list[SectorPerformance]:
             )
             continue
         entry.last = price
-        entry.cap = entry.cap or cap
-        entry.pe = entry.pe or ratio
+        if cap is not None:
+            entry.cap = cap
+        if ratio is not None:
+            entry.pe = ratio
 
     by_sector: dict[str, list[CompanyReturn]] = {}
     for entry in by_company.values():

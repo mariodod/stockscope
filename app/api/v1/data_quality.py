@@ -30,19 +30,22 @@ def _build_report(db: DbSession) -> DataQualityReport:
         select(MetricDefinition).order_by(MetricDefinition.key)
     ).all()
     for definition in definitions:
-        fact_rows = db.execute(
-            select(FundamentalFact.company_id, FundamentalFact.as_of_date).where(
-                FundamentalFact.metric_key == definition.key
-            )
-        ).all()
-        latest_dates: dict[int, date] = {}
-        for company_id, as_of in fact_rows:
-            latest_dates[company_id] = max(latest_dates.get(company_id, as_of), as_of)
+        latest_dates: dict[int, date] = dict(
+            db.execute(
+                select(
+                    FundamentalFact.company_id, func.max(FundamentalFact.as_of_date)
+                )
+                .where(FundamentalFact.metric_key == definition.key)
+                .group_by(FundamentalFact.company_id)
+            ).all()
+        )
 
         quote_column = QUOTE_COLUMNS.get(definition.key)
         if quote_column is not None:
             quote_rows = db.execute(
-                select(Quote.company_id, Quote.date).where(quote_column.is_not(None))
+                select(Quote.company_id, func.max(Quote.date))
+                .where(quote_column.is_not(None))
+                .group_by(Quote.company_id)
             ).all()
             for company_id, day in quote_rows:
                 latest_dates[company_id] = max(latest_dates.get(company_id, day), day)

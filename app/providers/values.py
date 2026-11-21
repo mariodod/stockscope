@@ -1,6 +1,6 @@
 """Conversions from provider payload values into canonical fact values."""
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -25,6 +25,12 @@ def as_of(value: Any, fallback: date) -> date:
         return value.date()
     if isinstance(value, date):
         return value
+    if isinstance(value, (int, float)) and value > 0:
+        seconds = value / 1000 if value > 10**11 else value
+        try:
+            return datetime.fromtimestamp(seconds, tz=UTC).date()
+        except (OSError, OverflowError, ValueError):
+            return fallback
     if isinstance(value, str) and value:
         try:
             return date.fromisoformat(value[:10])

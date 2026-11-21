@@ -16,7 +16,11 @@ def _date_from_info(value: Any) -> date | None:
     if isinstance(value, date):
         return value
     if isinstance(value, (int, float)) and value > 0:
-        return datetime.fromtimestamp(value, tz=UTC).date()
+        seconds = value / 1000 if value > 10**11 else value
+        try:
+            return datetime.fromtimestamp(seconds, tz=UTC).date()
+        except (OSError, OverflowError, ValueError):
+            return None
     if isinstance(value, str):
         try:
             return date.fromisoformat(value[:10])

@@ -155,7 +155,10 @@ class SECProvider:
         for tag, (metric_key, _unit) in TAG_MAP.items():
             unit = "USD/shares" if metric_key == "eps_ttm" else "USD"
             latest = self._latest(facts, tag, unit)
-            if latest[0] is not None:
+            if latest[0] is None:
+                continue
+            current = values.get(metric_key)
+            if current is None or (latest[1] or date.min) > (current[1] or date.min):
                 values[metric_key] = latest
 
         operating_entries = self._entries(facts, "OperatingIncomeLoss")

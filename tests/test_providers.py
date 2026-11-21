@@ -253,6 +253,40 @@ def test_sec_reads_per_share_eps() -> None:
     assert facts["eps_ttm"].period == "FY"
 
 
+def test_sec_keeps_newest_revenue_from_duplicate_tags() -> None:
+    def entry(value: int, end: str) -> dict[str, Any]:
+        return {"form": "10-K", "start": "2025-01-01", "end": end, "val": value, "filed": end}
+
+    payload = {
+        "facts": {
+            "us-gaap": {
+                "Revenues": {"units": {"USD": [entry(100, "2025-12-31")]}},
+                "RevenueFromContractWithCustomerExcludingAssessedTax": {
+                    "units": {"USD": [entry(80, "2024-12-31")]}
+                },
+            }
+        }
+    }
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload))
+    )
+
+    facts = {
+        fact.metric_key: fact
+        for fact in SECProvider(client=client).get_fundamentals("X", "1")
+    }
+
+    assert facts["revenue"].value == Decimal("100")
+    assert facts["revenue"].as_of_date == date(2025, 12, 31)
+
+
+def test_fmp_numeric_timestamps_are_parsed() -> None:
+    from app.providers.values import as_of
+
+    assert as_of(1767225600, date(2026, 11, 21)) == date(2026, 1, 1)
+    assert as_of(1767225600000, date(2026, 11, 21)) == date(2026, 1, 1)
+
+
 def test_sec_ebitda_matches_reporting_duration() -> None:
     def entry(start: str, val: int, filed: str) -> dict[str, Any]:
         return {"form": "10-K", "start": start, "end": "2025-03-31", "val": val, "filed": filed}

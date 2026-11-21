@@ -35,6 +35,32 @@ def test_export_returns_filtered_rows_and_requested_columns(
     assert {row[0] for row in rows[1:]} == {"AAA", "BBB", "DDD"}
 
 
+def test_export_keeps_negative_numbers_numeric(db_session: Session) -> None:
+    seed_metrics(db_session)
+    result = PagedCompanies(
+        total=1,
+        limit=50,
+        offset=0,
+        items=[
+            {
+                "ticker": "NEG",
+                "name": "Negative",
+                "exchange": None,
+                "sector": None,
+                "industry": None,
+                "metrics": {"roe": "-15.0"},
+                "score": None,
+                "score_components": {},
+                "missing_metrics": [],
+            }
+        ],
+    )
+
+    rows = list(csv.reader(screen_to_csv(result, ScreenRequest(columns=["roe"])).splitlines()))
+
+    assert rows[1][5] == "-15.0"
+
+
 def test_export_neutralises_formula_injection(db_session: Session) -> None:
     seed_metrics(db_session)
     result = PagedCompanies(

@@ -67,6 +67,28 @@ def test_fair_value_accepts_custom_multiples(client: TestClient, db_session: Ses
     assert values == {"Bear": 50, "Base": 75, "Bull": 125}
 
 
+def test_fair_value_honours_partial_multiples(client: TestClient, db_session: Session) -> None:
+    _seed(db_session)
+
+    response = client.get(
+        "/api/v1/companies/EST/fair-value", params={"low_pe": 10, "high_pe": 30}
+    )
+
+    assert response.status_code == 200
+    values = {item["name"]: item["fair_value"] for item in response.json()["scenarios"]}
+    assert values == {"Bear": 50, "Base": 100, "Bull": 150}
+
+
+def test_fair_value_rejects_invalid_multiples(client: TestClient, db_session: Session) -> None:
+    _seed(db_session)
+
+    response = client.get(
+        "/api/v1/companies/EST/fair-value", params={"low_pe": 30, "base_pe": 20}
+    )
+
+    assert response.status_code == 400
+
+
 def test_fair_value_requires_estimate(client: TestClient, db_session: Session) -> None:
     seed_metrics(db_session)
     db_session.add(Company(ticker="NOEST", name="No estimate"))

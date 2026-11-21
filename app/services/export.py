@@ -16,6 +16,11 @@ def _cell(value: object) -> str:
     if value is None:
         return ""
     text = str(value)
+    try:
+        float(text)
+        return text
+    except ValueError:
+        pass
     if text.startswith(UNSAFE_PREFIXES):
         return f"'{text}"
     return text

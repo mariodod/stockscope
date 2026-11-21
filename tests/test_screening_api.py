@@ -265,6 +265,45 @@ def test_peer_comparison_uses_same_sector_and_market_cap(
     assert client.get("/api/v1/companies/ZZZ/peers").status_code == 404
 
 
+def test_peer_search_considers_more_than_first_page(
+    client: TestClient, db_session: Session
+) -> None:
+    seed_metrics(db_session)
+    target = Company(ticker="TARGET", name="Target", sector="Tech")
+    db_session.add(target)
+    db_session.flush()
+    companies = [
+        Company(ticker=f"P{index:04d}", name=f"Peer {index}", sector="Tech")
+        for index in range(510)
+    ]
+    db_session.add_all(companies)
+    db_session.flush()
+    quotes = [
+        Quote(
+            company_id=target.id,
+            date=date.today(),
+            market_cap=Decimal("1000"),
+            source="test",
+        )
+    ]
+    quotes.extend(
+        Quote(
+            company_id=company.id,
+            date=date.today(),
+            market_cap=Decimal(str(1000 + (index + 1) * 1000)),
+            source="test",
+        )
+        for index, company in enumerate(companies)
+    )
+    db_session.add_all(quotes)
+    db_session.commit()
+
+    body = client.get("/api/v1/companies/TARGET/peers", params={"limit": 1}).json()
+
+    assert body["total"] == 510
+    assert body["items"][0]["ticker"] == "P0000"
+
+
 def test_data_quality_exposes_refresh_diagnostics(
     client: TestClient, db_session: Session
 ) -> None:

@@ -4,8 +4,9 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Company, FundamentalFact, Quote
+from app.models import Company, FundamentalFact
 from app.schemas.fair_value import FairValueRead, FairValueScenario
+from app.services.metrics import latest_quote_row
 
 DEFAULT_MULTIPLES = (12.0, 18.0, 25.0)
 
@@ -40,22 +41,31 @@ def fair_value(
             status_code=400, detail="No forward EPS estimate available for this company"
         )
 
-    current_price = db.scalar(
-        select(Quote.price)
-        .where(Quote.company_id == company.id)
-        .order_by(Quote.date.desc())
-        .limit(1)
-    )
+    quote = latest_quote_row(db, company.id)
+    current_price = quote.get("price") if quote else None
     price = float(current_price) if current_price is not None else None
     growth = _latest_value(db, company.id, "earnings_growth_estimate")
     implied_pe = _latest_value(db, company.id, "forward_pe")
 
-    if base_pe is not None:
-        low, base, high = low_pe or base_pe * 0.7, base_pe, high_pe or base_pe * 1.3
-    elif implied_pe and implied_pe > 0:
-        low, base, high = implied_pe * 0.8, implied_pe, implied_pe * 1.2
-    else:
-        low, base, high = DEFAULT_MULTIPLES
+    provided = {
+        name: value
+        for name, value in (("low", low_pe), ("base", base_pe), ("high", high_pe))
+        if value is not None
+    }
+    if any(value <= 0 for value in provided.values()):
+        raise ValueError("P/E multiples must be positive")
+
+    base = (
+        base_pe
+        if base_pe is not None
+        else implied_pe
+        if implied_pe is not None and implied_pe > 0
+        else DEFAULT_MULTIPLES[1]
+    )
+    low = low_pe if low_pe is not None else base * 0.8
+    high = high_pe if high_pe is not None else base * 1.2
+    if low > base or high < base:
+        raise ValueError("multiples must satisfy low <= base <= high")
 
     scenarios = []
     for name, multiple in (("Bear", low), ("Base", base), ("Bull", high)):
