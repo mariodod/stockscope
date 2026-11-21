@@ -143,6 +143,41 @@ def test_track_refresh_records_database_failures(db_session: Session) -> None:
     assert "UNIQUE" in (failed.error or "").upper()
 
 
+def test_history_backfill_is_idempotent_and_preserves_metrics(db_session: Session) -> None:
+    from app.ingestion.jobs import backfill_history
+    from app.providers.base import HistoricalPriceSeed
+
+    sync_universe(db_session, FakeProvider(), limit=1)
+
+    class HistoryProvider(FakeProvider):
+        def get_price_history(self, ticker: str, years: int = 5) -> Iterator[HistoricalPriceSeed]:
+            yield HistoricalPriceSeed(
+                date=date(2025, 1, 2),
+                close=Decimal("100"),
+                adjusted_close=Decimal("98"),
+                volume=500,
+            )
+
+    db_session.add(
+        Quote(
+            company_id=db_session.scalar(select(Company.id)),
+            date=date(2025, 1, 2),
+            market_cap=Decimal("1000000"),
+            source="fmp",
+        )
+    )
+    db_session.commit()
+
+    provider = HistoryProvider()
+    assert backfill_history(db_session, provider, ["S00000"], 5) == 1
+    assert backfill_history(db_session, provider, ["S00000"], 5) == 1
+
+    quote = db_session.scalar(select(Quote))
+    assert quote.adjusted_close == Decimal("98")
+    assert quote.market_cap == Decimal("1000000")
+    assert db_session.scalar(select(func.count()).select_from(Quote)) == 1
+
+
 def test_prune_quotes_removes_only_old_rows(db_session: Session) -> None:
     seed_metrics(db_session)
     company = Company(ticker="PRUNE", name="Prune")

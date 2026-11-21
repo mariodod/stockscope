@@ -1,10 +1,10 @@
 """Yahoo Finance adapter, used for breadth of TTM ratios."""
 
-from collections.abc import Callable
-from datetime import date
+from collections.abc import Callable, Iterator
+from datetime import date, datetime
 from typing import Any
 
-from app.providers.base import FactSeed, QuoteSeed
+from app.providers.base import FactSeed, HistoricalPriceSeed, QuoteSeed
 from app.providers.values import dec, whole
 
 INFO_FIELDS = {
@@ -41,6 +41,23 @@ class YFinanceProvider:
 
     def list_companies(self) -> Any:
         return iter(())
+
+    def get_price_history(self, ticker: str, years: int = 5) -> Iterator[HistoricalPriceSeed]:
+        """Daily close and split/dividend-adjusted close from yfinance."""
+        history = self._ticker(ticker).history(period=f"{years}y", auto_adjust=False)
+        if history is None or history.empty:
+            return
+        for timestamp, row in history.iterrows():
+            day = timestamp.date() if isinstance(timestamp, datetime) else timestamp
+            if not isinstance(day, date):
+                continue
+            yield HistoricalPriceSeed(
+                date=day,
+                close=dec(row.get("Close")),
+                adjusted_close=dec(row.get("Adj Close")),
+                volume=whole(row.get("Volume")),
+                source=self.name,
+            )
 
     def get_quote(self, ticker: str) -> QuoteSeed | None:
         info = self._ticker(ticker).info

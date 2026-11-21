@@ -22,6 +22,7 @@ class Quote(Base):
     )
     date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     price: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
+    adjusted_close: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
     market_cap: Mapped[Decimal | None] = mapped_column(Numeric(24, 2), nullable=True)
     pe_ratio: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
     volume: Mapped[int | None] = mapped_column(Integer, nullable=True)

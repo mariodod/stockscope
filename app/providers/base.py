@@ -20,6 +20,15 @@ class CompanySeed:
 
 
 @dataclass(frozen=True)
+class HistoricalPriceSeed:
+    date: date
+    close: Decimal | None
+    adjusted_close: Decimal | None
+    volume: int | None = None
+    source: str = ""
+
+
+@dataclass(frozen=True)
 class QuoteSeed:
     date: date
     price: Decimal | None = None
@@ -29,6 +38,12 @@ class QuoteSeed:
     fifty_two_week_high: Decimal | None = None
     fifty_two_week_low: Decimal | None = None
     source: str = ""
+
+
+class PriceHistoryProvider(Protocol):
+    name: str
+
+    def get_price_history(self, ticker: str, years: int = 5) -> Iterator[HistoricalPriceSeed]: ...
 
 
 @dataclass(frozen=True)

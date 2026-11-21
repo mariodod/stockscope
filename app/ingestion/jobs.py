@@ -9,7 +9,7 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session
 
 from app.models import Company, FundamentalFact, MetricDefinition, Quote, RefreshRun
-from app.providers.base import CompanySeed, Provider
+from app.providers.base import CompanySeed, PriceHistoryProvider, Provider
 
 
 @contextmanager
@@ -119,6 +119,39 @@ def refresh_quotes(
         quote.fifty_two_week_low = seed.fifty_two_week_low
         quote.source = seed.source or provider.name
         written += 1
+    session.commit()
+    return written
+
+
+def backfill_history(
+    session: Session, provider: PriceHistoryProvider, tickers: list[str], years: int = 5
+) -> int:
+    """Upsert daily close and adjusted-close history without losing quote metrics."""
+    companies = _companies(session)
+    existing = {
+        (quote.company_id, quote.date): quote for quote in session.scalars(select(Quote)).all()
+    }
+    written = 0
+    for ticker in tickers:
+        company = companies.get(ticker)
+        if company is None:
+            continue
+        for seed in provider.get_price_history(ticker, years):
+            key = (company.id, seed.date)
+            quote = existing.get(key)
+            if quote is None:
+                quote = Quote(
+                    company_id=company.id,
+                    date=seed.date,
+                    source=seed.source or provider.name,
+                )
+                session.add(quote)
+                existing[key] = quote
+            quote.price = seed.close
+            quote.adjusted_close = seed.adjusted_close
+            if seed.volume is not None:
+                quote.volume = seed.volume
+            written += 1
     session.commit()
     return written
 

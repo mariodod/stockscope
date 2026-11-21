@@ -292,6 +292,33 @@ def test_sec_ebitda_matches_reporting_duration() -> None:
     assert facts["ebitda"].period == "FY"
 
 
+def test_yfinance_price_history_maps_close_and_adjusted_close() -> None:
+    import pandas as pd
+
+    frame = pd.DataFrame(
+        {
+            "Close": [10.0, 11.0],
+            "Adj Close": [9.8, 10.7],
+            "Volume": [100, 200],
+        },
+        index=pd.to_datetime(["2025-01-02", "2025-01-03"]),
+    )
+
+    class FakeTicker:
+        def history(self, period: str, auto_adjust: bool) -> Any:
+            assert period == "5y"
+            assert auto_adjust is False
+            return frame
+
+    provider = YFinanceProvider(ticker_factory=lambda ticker: FakeTicker())
+    rows = list(provider.get_price_history("AAPL", 5))
+
+    assert len(rows) == 2
+    assert rows[0].close == Decimal("10")
+    assert rows[0].adjusted_close == Decimal("9.8")
+    assert rows[1].volume == 200
+
+
 def test_yfinance_adapter_uses_injected_ticker() -> None:
     class FakeTicker:
         info = {

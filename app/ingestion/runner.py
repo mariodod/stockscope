@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.session import SessionLocal
 from app.ingestion.jobs import (
+    backfill_history,
     prune_quotes,
     refresh_fundamentals,
     refresh_quotes,
@@ -15,9 +16,9 @@ from app.ingestion.jobs import (
     track_refresh,
 )
 from app.models import Company
-from app.providers import Provider, build_providers
+from app.providers import Provider, YFinanceProvider, build_providers
 
-JOBS = ("universe", "quotes", "fundamentals", "prune", "all")
+JOBS = ("universe", "quotes", "fundamentals", "history", "prune", "all")
 
 
 def _active_tickers(session: Session, limit: int | None) -> list[str]:
@@ -37,6 +38,15 @@ def run_job(
             session, "prune", "database"
         ) as run:
             run.rows_written = prune_quotes(session, settings.quote_retention_days)
+        return
+    if job == "history":
+        history_provider = YFinanceProvider()
+        with SessionLocal() as session, track_refresh(
+            session, "history", history_provider.name
+        ) as run:
+            run.rows_written = backfill_history(
+                session, history_provider, _active_tickers(session, limit), settings.history_years
+            )
         return
     with SessionLocal() as session:
         if job in {"universe", "all"}:
