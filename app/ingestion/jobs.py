@@ -2,9 +2,10 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session
 
 from app.models import Company, FundamentalFact, MetricDefinition, Quote, RefreshRun
@@ -120,6 +121,15 @@ def refresh_quotes(
         written += 1
     session.commit()
     return written
+
+
+def prune_quotes(session: Session, older_than_days: int) -> int:
+    """Delete quotes older than the retention window. Returns rows removed."""
+    cutoff = date.today() - timedelta(days=older_than_days)
+    result = session.execute(delete(Quote).where(Quote.date < cutoff))
+    deleted = result.rowcount if isinstance(result, CursorResult) else 0
+    session.commit()
+    return deleted
 
 
 def refresh_fundamentals(session: Session, provider: Provider, tickers: list[str]) -> int:

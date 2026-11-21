@@ -5,12 +5,19 @@ import argparse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.session import SessionLocal
-from app.ingestion.jobs import refresh_fundamentals, refresh_quotes, sync_universe, track_refresh
+from app.ingestion.jobs import (
+    prune_quotes,
+    refresh_fundamentals,
+    refresh_quotes,
+    sync_universe,
+    track_refresh,
+)
 from app.models import Company
 from app.providers import Provider, build_providers
 
-JOBS = ("universe", "quotes", "fundamentals", "all")
+JOBS = ("universe", "quotes", "fundamentals", "prune", "all")
 
 
 def _active_tickers(session: Session, limit: int | None) -> list[str]:
@@ -23,6 +30,12 @@ def _active_tickers(session: Session, limit: int | None) -> list[str]:
 def run_job(job: str, limit: int | None = None) -> None:
     """Run one ingestion job and record its outcome in RefreshRun."""
     providers = build_providers()
+    if job == "prune":
+        with SessionLocal() as session, track_refresh(
+            session, "prune", "database"
+        ) as run:
+            run.rows_written = prune_quotes(session, settings.quote_retention_days)
+        return
     with SessionLocal() as session:
         if job in {"universe", "all"}:
             provider: Provider = providers["sec"]

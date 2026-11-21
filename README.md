@@ -87,7 +87,7 @@ Providers sit behind a common interface (`app/providers/base.py`) so a source ca
 | `quotes` | FMP | `python -m app.ingestion.runner --job quotes` | Needs `FMP_API_KEY` in `.env` |
 | `fundamentals` | yfinance | `python -m app.ingestion.runner --job fundamentals --limit 100` | Free, no key; start with a limit to respect rate limits |
 
-Use `--job all` to run every job. Each run writes a `RefreshRun` row with its status and row count. Jobs upsert on natural keys, so rerunning them does not create duplicates.
+Use `--job all` to run every job. Each run writes a `RefreshRun` row with its status and row count. Jobs upsert on natural keys, so rerunning them does not create duplicates. `--job prune` removes daily quotes older than `QUOTE_RETENTION_DAYS` (default five years); it is not part of `--job all`.
 
 To run the refresh jobs on a schedule, start the APScheduler worker as a long-lived process (cron expressions come from `.env`):
 

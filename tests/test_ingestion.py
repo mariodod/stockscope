@@ -1,7 +1,7 @@
 """Ingestion jobs are idempotent and record their outcomes."""
 
 from collections.abc import Iterator
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.ingestion.jobs import (
+    prune_quotes,
     refresh_fundamentals,
     refresh_quotes,
     sync_universe,
@@ -140,6 +141,25 @@ def test_track_refresh_records_database_failures(db_session: Session) -> None:
     failed = db_session.scalars(select(RefreshRun)).one()
     assert failed.status == "failed"
     assert "UNIQUE" in (failed.error or "").upper()
+
+
+def test_prune_quotes_removes_only_old_rows(db_session: Session) -> None:
+    seed_metrics(db_session)
+    company = Company(ticker="PRUNE", name="Prune")
+    db_session.add(company)
+    db_session.flush()
+    db_session.add(
+        Quote(
+            company_id=company.id,
+            date=date.today() - timedelta(days=1000),
+            source="old",
+        )
+    )
+    db_session.add(Quote(company_id=company.id, date=date.today(), source="new"))
+    db_session.commit()
+
+    assert prune_quotes(db_session, 500) == 1
+    assert [row[0] for row in db_session.execute(select(Quote.source)).all()] == ["new"]
 
 
 def test_facts_without_source_upsert_idempotently(db_session: Session) -> None:
