@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { FilterBar } from '../components/FilterBar';
 import { MetricsTable } from '../components/MetricsTable';
 import { RankingPanel } from '../components/RankingPanel';
-import { apiPost } from '../lib/api';
+import { apiPost, exportScreen } from '../lib/api';
 import {
   useDataQuality,
   useMetrics,
@@ -43,6 +43,16 @@ export function ScreenerPage() {
   async function saveScreen() {
     const saved = await apiPost('/api/v1/screens', savedScreenSchema, state);
     setParams(new URLSearchParams({ screen: saved.token }), { replace: true });
+  }
+
+  async function exportCsv() {
+    const blob = await exportScreen(request);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'stockscope-screen.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   const rows = screenQuery.data?.items ?? [];
@@ -172,6 +182,13 @@ export function ScreenerPage() {
               <p className="text-sm text-slate-500">{total} companies match</p>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded border border-slate-300 px-3 py-1 text-sm"
+                onClick={() => void exportCsv()}
+              >
+                Export CSV
+              </button>
               <button
                 type="button"
                 className="rounded bg-slate-800 px-3 py-1 text-sm text-white"

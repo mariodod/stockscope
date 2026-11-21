@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { apiGet, ApiError } from './api';
+import { apiGet, ApiError, exportScreen } from './api';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -23,6 +23,20 @@ describe('api error shapes', () => {
       name: ApiError.name,
       message: 'Bad metric',
     });
+  });
+
+  it('downloads CSV exports', async () => {
+    const blob = new Blob(['ticker,name\nAAA,Alpha\n'], { type: 'text/csv' });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(blob, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await exportScreen({ filters: [], sort: [], limit: 50, offset: 0 });
+
+    expect(result).toBeInstanceOf(Blob);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/screen/export',
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 
   it('surfaces list-shaped validation details', async () => {
