@@ -1,4 +1,4 @@
-"""Metric registry parsing and idempotent seeding."""
+﻿"""Metric registry parsing and idempotent seeding."""
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -10,8 +10,8 @@ from app.seed.metrics import parse_metrics, seed_metrics
 def test_parse_metrics_covers_catalog() -> None:
     metrics = parse_metrics()
 
-    assert len(metrics) == 38
-    assert len({metric.key for metric in metrics}) == 38
+    assert len(metrics) == 40
+    assert len({metric.key for metric in metrics}) == 40
     assert {metric.category for metric in metrics} == {
         "valuation",
         "profitability",
@@ -32,6 +32,6 @@ def test_seed_metrics_is_idempotent(db_session: Session) -> None:
     first = seed_metrics(db_session)
     second = seed_metrics(db_session)
 
-    assert first == (38, 0)
-    assert second == (0, 38)
-    assert db_session.scalar(select(func.count()).select_from(MetricDefinition)) == 38
+    assert first == (40, 0)
+    assert second == (0, 40)
+    assert db_session.scalar(select(func.count()).select_from(MetricDefinition)) == 40

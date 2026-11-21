@@ -1,4 +1,4 @@
-"""Metric registry endpoint behavior."""
+﻿"""Metric registry endpoint behavior."""
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -13,7 +13,7 @@ def test_metrics_lists_catalog(client: TestClient, db_session: Session) -> None:
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 38
+    assert len(data) == 40
     assert set(data[0]) == {
         "key",
         "label",
