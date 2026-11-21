@@ -2,7 +2,7 @@
 
 A stock screening and analysis platform for publicly listed companies. It pulls fundamentals and quotes from free data providers, stores them in a local database, and exposes them through a fast, filterable web dashboard.
 
-> **Status: M1–M5 complete.** The roadmap lives in [PLAN.md](PLAN.md). Design decisions and reference material live in [docs/](docs/). Tracked work is in the [GitHub milestones and issues](https://github.com/mariodod/stockscope/issues).
+> **Status: M1–M5 complete.** The roadmap lives in [PLAN.md](PLAN.md), future feature ideas in [docs/FUTURE_IDEAS.md](docs/FUTURE_IDEAS.md), and design notes in [docs/](docs/). Tracked work is in the [GitHub milestones and issues](https://github.com/mariodod/stockscope/issues).
 
 ## What it will do
 
@@ -76,6 +76,8 @@ npm run dev        # http://localhost:5173 (proxies /api to localhost:8000)
 - **Screener** — filter by any metric, sort by one metric, toggle columns, add weighted composite ranking, and paginate.
 - **Company detail** — fundamentals timeline (revenue, EBITDA, EPS) and latest metrics with source and as-of date.
 - **Shareable state** — filters, sort, weights and pagination are encoded in the URL, so a screen can be bookmarked or sent to someone else. **Save screen** stores the state server-side and switches the URL to a short token. There are no user accounts; anyone with the token can read that screen.
+- **Watchlist** — star companies from the screener; the list is kept in the current browser.
+- **CSV export** — download the full filtered and ranked screen, including all metric columns.
 
 ## Data ingestion (M2)
 
