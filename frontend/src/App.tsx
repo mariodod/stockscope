@@ -2,8 +2,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense, lazy } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 
+import { useAlerts } from './lib/alerts';
 import { usePortfolio } from './lib/portfolio';
 import { useWatchlist } from './lib/watchlist';
+import { AlertsPage } from './pages/AlertsPage';
 import { DividendsPage } from './pages/DividendsPage';
 import { HeatmapPage } from './pages/HeatmapPage';
 import { PortfolioPage } from './pages/PortfolioPage';
@@ -27,6 +29,7 @@ const queryClient = new QueryClient({
 export default function App() {
   const watchlist = useWatchlist();
   const portfolio = usePortfolio();
+  const alerts = useAlerts();
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -37,7 +40,10 @@ export default function App() {
               Stockscope
             </Link>
             <span className="text-xs text-slate-500">Public company screener</span>
-            <Link to="/heatmap" className="ml-auto text-sm text-sky-700 hover:underline">
+            <Link to="/alerts" className="ml-auto text-sm text-sky-700 hover:underline">
+              Alerts ({alerts.alerts.length})
+            </Link>
+            <Link to="/heatmap" className="text-sm text-sky-700 hover:underline">
               Heatmap
             </Link>
             <Link to="/dividends" className="text-sm text-sky-700 hover:underline">
@@ -70,6 +76,12 @@ export default function App() {
               element={<WatchlistPage tickers={watchlist.tickers} onRemove={watchlist.remove} />}
             />
             <Route path="/heatmap" element={<HeatmapPage />} />
+            <Route
+              path="/alerts"
+              element={
+                <AlertsPage alerts={alerts.alerts} onAdd={alerts.add} onRemove={alerts.remove} />
+              }
+            />
             <Route
               path="/dividends"
               element={
