@@ -64,7 +64,7 @@ function FilingAlertRow({
   alert: FilingAlert;
   filings: Filing[];
   onRemove: (id: string) => void;
-  onMarkSeen: (id: string, lastSeen: string) => void;
+  onMarkSeen: (id: string, lastSeen: string, accessions: string[]) => void;
 }) {
   const newFilings = matchingFilings(alert, filings);
   const latest = newFilings
@@ -93,7 +93,13 @@ function FilingAlertRow({
           <button
             type="button"
             className="text-sm text-sky-700"
-            onClick={() => onMarkSeen(alert.id, latest)}
+            onClick={() =>
+              onMarkSeen(
+                alert.id,
+                latest,
+                newFilings.map((filing) => filing.accession_number),
+              )
+            }
           >
             Mark seen
           </button>
@@ -117,7 +123,7 @@ export function AlertsPage({
   alerts: AnyAlert[];
   onAddAlert: (alert: AnyAlert) => void;
   onRemove: (id: string) => void;
-  onMarkFilingSeen: (id: string, lastSeen: string) => void;
+  onMarkFilingSeen: (id: string, lastSeen: string, accessions: string[]) => void;
 }) {
   const [ticker, setTicker] = useState('');
   const [metric, setMetric] = useState('pe_ratio');
@@ -197,6 +203,7 @@ export function AlertsPage({
         .map((form) => form.trim().toUpperCase())
         .filter(Boolean),
       lastSeen: new Date().toISOString().slice(0, 10),
+      seenAccessions: [],
       createdAt: new Date().toISOString(),
     });
     if (!parsed.success) {

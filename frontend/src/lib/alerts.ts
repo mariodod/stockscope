@@ -21,6 +21,7 @@ export const filingAlertSchema = z.object({
   ticker: z.string().regex(/^[A-Z0-9.-]{1,16}$/),
   forms: z.array(z.string()).default([]),
   lastSeen: z.string(),
+  seenAccessions: z.array(z.string()).default([]),
   createdAt: z.string(),
 });
 export type FilingAlert = z.infer<typeof filingAlertSchema>;
@@ -78,10 +79,16 @@ export function useAlerts() {
   );
 
   const markFilingSeen = useCallback(
-    (id: string, lastSeen: string) =>
+    (id: string, lastSeen: string, accessions: string[]) =>
       update(
         alerts.map((alert) =>
-          alert.id === id && isFilingAlert(alert) ? { ...alert, lastSeen } : alert,
+          alert.id === id && isFilingAlert(alert)
+            ? {
+                ...alert,
+                lastSeen,
+                seenAccessions: [...new Set([...alert.seenAccessions, ...accessions])],
+              }
+            : alert,
         ),
       ),
     [alerts, update],
@@ -102,13 +109,16 @@ export function matchingFilings(alert: FilingAlert, filings: Filing[]): Filing[]
   return filings.filter(
     (filing) =>
       filing.ticker === alert.ticker &&
-      filing.filing_date.slice(0, 10) > alert.lastSeen.slice(0, 10) &&
+      filing.filing_date.slice(0, 10) >= alert.lastSeen.slice(0, 10) &&
+      !alert.seenAccessions.includes(filing.accession_number) &&
       (alert.forms.length === 0 || alert.forms.includes(filing.form)),
   );
 }
 
 export function alertNotificationKey(alert: AnyAlert): string {
-  if (isFilingAlert(alert)) return `${alert.id}:${alert.lastSeen}`;
+  if (isFilingAlert(alert)) {
+    return `${alert.id}:${alert.lastSeen}:${alert.seenAccessions.join(",")}`;
+  }
   return `${alert.id}:${alert.op}:${alert.threshold}`;
 }
 

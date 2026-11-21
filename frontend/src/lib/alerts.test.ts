@@ -43,15 +43,17 @@ describe('alerts', () => {
       ticker: 'MSFT',
       forms: ['10-K'],
       lastSeen: '2026-01-01',
+      seenAccessions: [],
       createdAt: '2026-01-01',
     };
 
     act(() => result.current.addAlert(filing));
     expect(result.current.alerts[0] && isFilingAlert(result.current.alerts[0])).toBe(true);
 
-    act(() => result.current.markFilingSeen('2', '2026-02-01'));
+    act(() => result.current.markFilingSeen('2', '2026-02-01', ['acc-1']));
     const stored = result.current.alerts[0];
     expect(stored && isFilingAlert(stored) && stored.lastSeen).toBe('2026-02-01');
+    expect(stored && isFilingAlert(stored) && stored.seenAccessions).toEqual(['acc-1']);
   });
 
   it('evaluates threshold comparisons', () => {
@@ -68,6 +70,7 @@ describe('alerts', () => {
       ticker: 'MSFT',
       forms: ['10-K'],
       lastSeen: '2026-01-01',
+      seenAccessions: [],
       createdAt: '2026-01-01',
     };
     const filings = [
@@ -89,11 +92,18 @@ describe('alerts', () => {
       },
     ];
 
-    const matched = matchingFilings(alert, filings);
-    expect(matched).toHaveLength(1);
-    expect(matched[0]?.form).toBe('10-K');
-    expect(alertNotificationKey(alert)).toBe('3:2026-01-01');
-    expect(alertNotificationKey({ ...alert, lastSeen: '2026-02-01' })).toBe('3:2026-02-01');
+    const sameDay = {
+      ticker: 'MSFT',
+      company_name: 'Microsoft',
+      accession_number: '3',
+      form: '10-K',
+      filing_date: '2026-01-01',
+      primary_document: null,
+    };
+    const matched = matchingFilings(alert, [...filings, sameDay]);
+    expect(matched.map((filing) => filing.accession_number)).toEqual(['1', '3']);
+    expect(alertNotificationKey(alert)).toBe('3:2026-01-01:');
+    expect(alertNotificationKey({ ...alert, seenAccessions: ['1'] })).toBe('3:2026-01-01:1');
   });
 
   it('only sends browser notifications when permission is granted', () => {
