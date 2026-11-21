@@ -25,6 +25,7 @@ def test_parse_metrics_covers_catalog() -> None:
     assert by_key["revenue_growth_yoy"].direction is MetricDirection.HIGH
     assert by_key["ebitda"].is_derived is True
     assert by_key["sector"].direction is MetricDirection.NONE
+    assert by_key["last_daily_volume"].label == "Last daily volume"
 
 
 def test_seed_metrics_is_idempotent(db_session: Session) -> None:

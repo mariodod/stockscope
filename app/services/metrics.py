@@ -18,7 +18,7 @@ QUOTE_COLUMNS = {
     "price": Quote.price,
     "fifty_two_week_high": Quote.fifty_two_week_high,
     "fifty_two_week_low": Quote.fifty_two_week_low,
-    "avg_volume": Quote.volume,
+    "last_daily_volume": Quote.volume,
 }
 QUOTE_KEYS = tuple(QUOTE_COLUMNS)
 

@@ -155,6 +155,26 @@ def test_missing_values_score_neutrally_and_are_flagged(
     assert delta["score_components"]["revenue_growth_yoy"] == 0.5
 
 
+def test_last_daily_volume_is_available(client: TestClient, db_session: Session) -> None:
+    seed_metrics(db_session)
+    company = Company(ticker="VOL", name="Volume")
+    db_session.add(company)
+    db_session.flush()
+    db_session.add(
+        Quote(
+            company_id=company.id,
+            date=date.today(),
+            volume=1_234_567,
+            source="test",
+        )
+    )
+    db_session.commit()
+
+    body = _screen(client, {"columns": ["last_daily_volume"]})
+
+    assert float(body["items"][0]["metrics"]["last_daily_volume"]) == 1_234_567
+
+
 def test_newer_quote_wins_over_older_fact(client: TestClient, db_session: Session) -> None:
     seed_metrics(db_session)
     company = Company(ticker="NEW", name="Newest wins")

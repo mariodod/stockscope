@@ -60,7 +60,7 @@ This is the canonical vocabulary for metrics used across ingestion, API, and UI.
 | `price` | Last price | latest close | currency | neutral |
 | `fifty_two_week_high` | 52-week high | trailing 52w max close | currency | neutral |
 | `fifty_two_week_low` | 52-week low | trailing 52w min close | currency | neutral |
-| `avg_volume` | Avg volume | average daily volume | number | neutral |
+| `last_daily_volume` | Last daily volume | volume reported on the latest quote | number | neutral |
 
 ## Descriptive (not scored)
 

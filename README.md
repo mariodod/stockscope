@@ -144,7 +144,6 @@ For the frontend, run `npm --prefix frontend test`, `npm --prefix frontend lint`
 
 - Coverage is **US-listed companies only**. The schema supports a `country`/`exchange` field for future global expansion, but no non-US provider is wired in.
 - The FMP quote adapter is covered by fixture tests; a live quote sync needs an `FMP_API_KEY` and was not verified in CI.
-- `avg_volume` currently stores a single quote's daily volume, not a multi-day average.
 - Free providers can be delayed, rate-limited or incomplete. The `/data-quality` endpoint and dashboard badges expose coverage and staleness, but data accuracy still needs verification against primary sources.
 - Caching is in-memory and per process; a multi-process deployment would need a shared cache.
 - No user accounts or write endpoints; the API is read-only apart from CLI-driven ingestion.
