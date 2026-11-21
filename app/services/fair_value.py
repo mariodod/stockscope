@@ -4,24 +4,11 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Company, FundamentalFact
+from app.models import Company
 from app.schemas.fair_value import FairValueRead, FairValueScenario
-from app.services.metrics import latest_quote_row
+from app.services.metrics import latest_fact_value, latest_quote_row
 
 DEFAULT_MULTIPLES = (12.0, 18.0, 25.0)
-
-
-def _latest_value(db: Session, company_id: int, metric_key: str) -> float | None:
-    value = db.scalar(
-        select(FundamentalFact.value)
-        .where(
-            FundamentalFact.company_id == company_id,
-            FundamentalFact.metric_key == metric_key,
-        )
-        .order_by(FundamentalFact.as_of_date.desc(), FundamentalFact.id.desc())
-        .limit(1)
-    )
-    return float(value) if value is not None else None
 
 
 def fair_value(
@@ -35,7 +22,8 @@ def fair_value(
     if company is None:
         raise HTTPException(status_code=404, detail=f"Unknown ticker: {ticker}")
 
-    forward_eps = _latest_value(db, company.id, "forward_eps")
+    eps = latest_fact_value(db, company.id, "forward_eps")
+    forward_eps = float(eps) if eps is not None else None
     if forward_eps is None:
         raise HTTPException(
             status_code=400, detail="No forward EPS estimate available for this company"
@@ -44,8 +32,10 @@ def fair_value(
     quote = latest_quote_row(db, company.id)
     current_price = quote.get("price") if quote else None
     price = float(current_price) if current_price is not None else None
-    growth = _latest_value(db, company.id, "earnings_growth_estimate")
-    implied_pe = _latest_value(db, company.id, "forward_pe")
+    growth_value = latest_fact_value(db, company.id, "earnings_growth_estimate")
+    growth = float(growth_value) if growth_value is not None else None
+    pe_value = latest_fact_value(db, company.id, "forward_pe")
+    implied_pe = float(pe_value) if pe_value is not None else None
 
     provided = {
         name: value

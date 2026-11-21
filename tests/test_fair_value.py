@@ -1,6 +1,6 @@
 """Fair value scenarios from forward EPS estimates."""
 
-from datetime import date
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
@@ -65,6 +65,38 @@ def test_fair_value_accepts_custom_multiples(client: TestClient, db_session: Ses
     assert response.status_code == 200
     values = {item["name"]: item["fair_value"] for item in response.json()["scenarios"]}
     assert values == {"Bear": 50, "Base": 75, "Bull": 125}
+
+
+def test_fair_value_uses_filed_at_to_break_same_date_ties(
+    client: TestClient, db_session: Session
+) -> None:
+    seed_metrics(db_session)
+    company = Company(ticker="TIE", name="Tie Co")
+    db_session.add(company)
+    db_session.flush()
+    for value, filed_day in ((3, date(2026, 1, 1)), (6, date(2026, 2, 1))):
+        db_session.add(
+            FundamentalFact(
+                company_id=company.id,
+                metric_key="forward_eps",
+                period="TTM",
+                value=Decimal(str(value)),
+                unit="currency",
+                source=f"test-{filed_day.isoformat()}",
+                as_of_date=date(2026, 1, 1),
+                filed_at=datetime.combine(filed_day, time.min, tzinfo=UTC),
+            )
+        )
+    db_session.commit()
+
+    response = client.get("/api/v1/companies/TIE/fair-value", params={"base_pe": 20})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["forward_eps"] == 6
+    assert next(item for item in body["scenarios"] if item["name"] == "Base")[
+        "fair_value"
+    ] == 120
 
 
 def test_fair_value_honours_partial_multiples(client: TestClient, db_session: Session) -> None:

@@ -1,5 +1,6 @@
 """Derived views over the latest value of each metric."""
 
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import Select, case, func, literal, select, union_all
@@ -38,6 +39,21 @@ def _fact_order() -> list[Any]:
         FundamentalFact.filed_at.desc(),
         FundamentalFact.id.desc(),
     ]
+
+
+def latest_fact_value(
+    session: Session, company_id: int, metric_key: str
+) -> Decimal | None:
+    """Latest value for one company and metric, using the shared fact ordering."""
+    return session.scalar(
+        select(FundamentalFact.value)
+        .where(
+            FundamentalFact.company_id == company_id,
+            FundamentalFact.metric_key == metric_key,
+        )
+        .order_by(*_fact_order())
+        .limit(1)
+    )
 
 
 def _latest_facts() -> Select[Any]:
