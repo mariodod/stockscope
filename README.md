@@ -78,6 +78,9 @@ npm run dev        # http://localhost:5173 (proxies /api to localhost:8000)
 - **Shareable state** — filters, sort, weights and pagination are encoded in the URL, so a screen can be bookmarked or sent to someone else. **Save screen** stores the state server-side and switches the URL to a short token. There are no user accounts; anyone with the token can read that screen.
 - **Watchlist** — star companies from the screener; the list is kept in the current browser.
 - **CSV export** — download the full filtered and ranked screen, including all metric columns.
+- **Portfolio, peer comparison and fair value** — browser-local holdings with P/L and allocation; same-sector peers and forward-EPS valuation scenarios on the company page.
+- **Dividend calendar, alerts and sector heatmap** — upcoming ex-dividend dates, in-app metric thresholds and a clickable sector return map.
+- **Returns simulator** — lump-sum or dollar-cost averaging, with dividend reinvestment and a benchmark.
 
 ## Data ingestion (M2)
 
@@ -89,6 +92,8 @@ Providers sit behind a common interface (`app/providers/base.py`) so a source ca
 | `universe` | FMP | `python -m app.ingestion.runner --job universe --provider fmp` | Needs `FMP_API_KEY`; use for broader exchange coverage |
 | `quotes` | FMP | `python -m app.ingestion.runner --job quotes` | Needs `FMP_API_KEY` in `.env` |
 | `fundamentals` | yfinance | `python -m app.ingestion.runner --job fundamentals --limit 100` | Free, no key; start with a limit to respect rate limits |
+| `history` | yfinance | `python -m app.ingestion.runner --job history --limit 100` | Backfills close and adjusted close for the simulator and heatmap |
+| `dividends` | yfinance | `python -m app.ingestion.runner --job dividends --limit 100` | Expected ex-dividend and payment dates for the calendar |
 
 Use `--job all` to run every job. Each run writes a `RefreshRun` row with its status and row count. Jobs upsert on natural keys, so rerunning them does not create duplicates. `--job prune` removes daily quotes older than `QUOTE_RETENTION_DAYS` (default five years); it is not part of `--job all`.
 
@@ -109,6 +114,11 @@ Adapter tests use recorded-style payloads and run in CI without live API calls.
 | `GET` | `/api/v1/companies` | Filterable, sortable, paginated company list |
 | `POST` | `/api/v1/screen` | Structured filters, sorting, and composite ranking |
 | `GET` | `/api/v1/companies/{ticker}` | Company detail with latest metrics and history |
+| `GET` | `/api/v1/companies/{ticker}/peers` | Closest same-sector companies |
+| `GET` | `/api/v1/companies/{ticker}/fair-value` | Forward-EPS valuation scenarios |
+| `POST` | `/api/v1/simulate` | Lump-sum or DCA return simulation |
+| `GET` | `/api/v1/dividends` | Upcoming dividend events |
+| `GET` | `/api/v1/sector-performance` | Sector returns for the heatmap |
 | `GET` | `/api/v1/sectors` | Distinct sectors and industries for filter dropdowns |
 | `GET` | `/api/v1/data-quality` | Metric coverage, staleness and latest refresh runs |
 | `POST` | `/api/v1/screens` | Save a screen and receive a shareable token |

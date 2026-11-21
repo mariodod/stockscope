@@ -311,3 +311,4 @@ Each milestone ends in a verifiable state. Acceptance criteria are checked befor
 - **Latest metrics:** computed on the fly. The SQL pivot plus Python ranking benchmarked at 0.848s for 10,400 companies and 41,600 facts on a quiet machine, well under the 1s target. A materialized view would add refresh complexity without a measured need.
 - **Quote retention:** five years (`QUOTE_RETENTION_DAYS=1825`), pruned by `python -m app.ingestion.runner --job prune`. This balances history for year-over-year metrics against database size.
 - **Live FMP verification:** still needs an `FMP_API_KEY` from the operator; fixtures cover the adapter in CI.
+- **Feature ideas from `docs/FUTURE_IDEAS.md`:** all implemented. Alerts use in-app delivery rather than email/push; fair value uses yfinance forward EPS rather than a validated FMP estimate key.
