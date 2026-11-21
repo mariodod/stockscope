@@ -3,6 +3,7 @@
 from collections.abc import Iterator
 from datetime import date, timedelta
 from decimal import Decimal
+from typing import Any
 
 import pytest
 from sqlalchemy import func, select
@@ -195,6 +196,47 @@ def test_prune_quotes_removes_only_old_rows(db_session: Session) -> None:
 
     assert prune_quotes(db_session, 500) == 1
     assert [row[0] for row in db_session.execute(select(Quote.source)).all()] == ["new"]
+
+
+def test_quote_refresh_keeps_values_when_seed_is_null(db_session: Session) -> None:
+    sync_universe(db_session, FakeProvider(), limit=1)
+    db_session.add(
+        Quote(
+            company_id=db_session.scalar(select(Company.id)),
+            date=date(2026, 1, 2),
+            price=Decimal("100"),
+            market_cap=Decimal("1000000"),
+            source="fmp",
+        )
+    )
+    db_session.commit()
+
+    class NullQuoteProvider(FakeProvider):
+        def get_quote(self, ticker: str) -> Any:
+            return QuoteSeed(date=date(2026, 1, 2), source="fmp")
+
+    provider = NullQuoteProvider()
+    assert refresh_quotes(db_session, provider, ["S00000"]) == 1
+    quote = db_session.scalar(select(Quote))
+    assert quote.price == Decimal("100")
+    assert quote.market_cap == Decimal("1000000")
+
+
+def test_limited_universe_sync_keeps_ciks_for_absent_tickers(db_session: Session) -> None:
+    class Feed(FakeProvider):
+        def __init__(self, tickers: list[str]) -> None:
+            self.tickers = tickers
+
+        def list_companies(self) -> Iterator[CompanySeed]:
+            for ticker in self.tickers:
+                yield CompanySeed(ticker=ticker, name=ticker, cik="1652044")
+
+    sync_universe(db_session, Feed(["GOOGL", "GOOG"]))
+    sync_universe(db_session, Feed(["GOOG"]), limit=1)
+
+    rows = dict(db_session.execute(select(Company.ticker, Company.cik)).all())
+    assert rows["GOOGL"] == "1652044"
+    assert rows["GOOG"] is None
 
 
 def test_facts_without_source_upsert_idempotently(db_session: Session) -> None:

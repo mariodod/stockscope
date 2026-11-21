@@ -67,8 +67,20 @@ def sync_universe(session: Session, provider: Provider, limit: int | None = None
     # then clear stale holders before writing so a delisted class cannot block the new one.
     assignments: dict[str, str | None] = {}
     claimed: dict[str, str] = {}
+    seeded_tickers = {seed.ticker for seed in seeds}
+    reserved = (
+        {
+            company.cik: ticker
+            for ticker, company in existing.items()
+            if company.cik is not None and ticker not in seeded_tickers
+        }
+        if limit is not None
+        else {}
+    )
     for seed in seeds:
         cik = seed.cik
+        if cik is not None and cik in reserved and reserved[cik] != seed.ticker:
+            cik = None
         if cik is not None:
             if cik in claimed and claimed[cik] != seed.ticker:
                 cik = None
@@ -82,6 +94,7 @@ def sync_universe(session: Session, provider: Provider, limit: int | None = None
             continue
         if assignments.get(ticker) != cik and cik in claimed:
             stale_company.cik = None
+    session.flush()
 
     for seed in seeds:
         company = existing.get(seed.ticker)
@@ -125,12 +138,16 @@ def refresh_quotes(
             quote = Quote(company_id=company.id, date=day, source=seed.source or provider.name)
             session.add(quote)
             existing[key] = quote
-        quote.price = seed.price
-        quote.market_cap = seed.market_cap
-        quote.pe_ratio = seed.pe_ratio
-        quote.volume = seed.volume
-        quote.fifty_two_week_high = seed.fifty_two_week_high
-        quote.fifty_two_week_low = seed.fifty_two_week_low
+        for field, value in (
+            ("price", seed.price),
+            ("market_cap", seed.market_cap),
+            ("pe_ratio", seed.pe_ratio),
+            ("volume", seed.volume),
+            ("fifty_two_week_high", seed.fifty_two_week_high),
+            ("fifty_two_week_low", seed.fifty_two_week_low),
+        ):
+            if value is not None:
+                setattr(quote, field, value)
         quote.source = seed.source or provider.name
         written += 1
     session.commit()
@@ -223,8 +240,10 @@ def backfill_history(
                 )
                 session.add(quote)
                 existing[key] = quote
-            quote.price = seed.close
-            quote.adjusted_close = seed.adjusted_close
+            if seed.close is not None:
+                quote.price = seed.close
+            if seed.adjusted_close is not None:
+                quote.adjusted_close = seed.adjusted_close
             if seed.volume is not None:
                 quote.volume = seed.volume
             written += 1

@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     quote_refresh_cron: str = "0 22 * * 1-5"
     fundamentals_refresh_cron: str = "0 3 * * 0"
     universe_refresh_cron: str = "0 4 * * 0"
+    history_refresh_cron: str = "0 5 * * 0"
+    dividends_refresh_cron: str = "0 6 * * 0"
+    filings_refresh_cron: str = "0 7 * * *"
+    prune_cron: str = "0 8 1 * *"
 
 
 @lru_cache

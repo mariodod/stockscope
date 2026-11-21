@@ -14,6 +14,10 @@ def build_scheduler() -> BackgroundScheduler:
         ("universe", settings.universe_refresh_cron),
         ("quotes", settings.quote_refresh_cron),
         ("fundamentals", settings.fundamentals_refresh_cron),
+        ("history", settings.history_refresh_cron),
+        ("dividends", settings.dividends_refresh_cron),
+        ("filings", settings.filings_refresh_cron),
+        ("prune", settings.prune_cron),
     )
     for name, cron in jobs:
         scheduler.add_job(
