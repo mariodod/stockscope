@@ -34,6 +34,14 @@ export function useCompany(ticker: string) {
   });
 }
 
+export function usePeers(ticker: string) {
+  return useQuery({
+    queryKey: ['peers', ticker],
+    queryFn: () => apiGet(`/api/v1/companies/${ticker}/peers`, pagedCompaniesSchema),
+    enabled: ticker.length > 0,
+  });
+}
+
 export function useSavedScreen(token: string | null) {
   return useQuery({
     queryKey: ['saved-screen', token],

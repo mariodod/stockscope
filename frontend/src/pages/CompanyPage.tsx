@@ -12,7 +12,7 @@ import {
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { formatMetric, isStale, toNumber } from '../lib/format';
-import { useCompany, useDataQuality } from '../lib/queries';
+import { useCompany, useDataQuality, usePeers } from '../lib/queries';
 
 const CHART_METRICS = ['revenue', 'ebitda', 'eps_ttm'];
 
@@ -21,6 +21,7 @@ export function CompanyPage() {
   const [params] = useSearchParams();
   const companyQuery = useCompany(ticker ?? '');
   const qualityQuery = useDataQuality();
+  const peersQuery = usePeers(ticker ?? '');
   const staleAfterDays = qualityQuery.data?.stale_after_days ?? 90;
   const detail = companyQuery.data;
 
@@ -117,6 +118,51 @@ export function CompanyPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="rounded border border-slate-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold">Closest sector peers</h2>
+        {peersQuery.data?.items.length === 0 || !peersQuery.data ? (
+          <p className="text-sm text-slate-500">No sector peers available.</p>
+        ) : (
+          <div className="overflow-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-100 text-xs uppercase">
+                <tr>
+                  <th className="px-3 py-2">Ticker</th>
+                  <th className="px-3 py-2">Company</th>
+                  <th className="px-3 py-2">Market cap</th>
+                  <th className="px-3 py-2">P/E</th>
+                  <th className="px-3 py-2">ROE</th>
+                </tr>
+              </thead>
+              <tbody>
+                {peersQuery.data.items.map((peer) => (
+                  <tr key={peer.ticker} className="border-t border-slate-100">
+                    <td className="px-3 py-2">
+                      <Link
+                        className="text-sky-700 hover:underline"
+                        to={`/companies/${peer.ticker}`}
+                      >
+                        {peer.ticker}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2">{peer.name}</td>
+                    <td className="tabular px-3 py-2">
+                      {formatMetric(peer.metrics.market_cap, 'currency')}
+                    </td>
+                    <td className="tabular px-3 py-2">
+                      {formatMetric(peer.metrics.pe_ratio, 'ratio')}
+                    </td>
+                    <td className="tabular px-3 py-2">
+                      {formatMetric(peer.metrics.roe, 'percent')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

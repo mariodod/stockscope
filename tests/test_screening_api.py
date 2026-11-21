@@ -250,6 +250,21 @@ def test_data_quality_reports_coverage_and_staleness(
 
 
 
+def test_peer_comparison_uses_same_sector_and_market_cap(
+    client: TestClient, db_session: Session
+) -> None:
+    _seed(db_session)
+
+    response = client.get("/api/v1/companies/AAA/peers", params={"limit": 2})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 2
+    assert [item["ticker"] for item in body["items"]] == ["BBB", "DDD"]
+    assert all(item["sector"] == "Technology" for item in body["items"])
+    assert client.get("/api/v1/companies/ZZZ/peers").status_code == 404
+
+
 def test_data_quality_exposes_refresh_diagnostics(
     client: TestClient, db_session: Session
 ) -> None:

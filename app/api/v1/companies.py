@@ -25,6 +25,7 @@ from app.services.metrics import (
     latest_quote_row,
     metric_labels,
 )
+from app.services.peers import find_peers
 from app.services.screening import screen
 
 router = APIRouter(tags=["companies"])
@@ -106,6 +107,15 @@ def get_company(ticker: str, db: DbSession) -> CompanyDetail:
         latest_metrics=list(latest.values()),
         history=history,
     )
+
+
+@router.get("/companies/{ticker}/peers", response_model=PagedCompanies)
+def get_peers(
+    ticker: str,
+    db: DbSession,
+    limit: int = Query(default=5, ge=1, le=20),
+) -> PagedCompanies:
+    return find_peers(db, ticker, limit)
 
 
 @router.get("/sectors", response_model=SectorCounts)
