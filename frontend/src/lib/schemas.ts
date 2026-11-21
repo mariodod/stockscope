@@ -114,6 +114,26 @@ export type ScreenState = z.infer<typeof screenStateSchema>;
 
 export const savedScreenSchema = screenStateSchema.extend({ token: z.string() });
 
+const performanceSchema = z.object({
+  final_value: z.number(),
+  total_contributed: z.number(),
+  total_return_pct: z.number(),
+  annualised_return_pct: z.number(),
+  max_drawdown_pct: z.number(),
+});
+
+export const simulationResultSchema = z.object({
+  performance: performanceSchema,
+  benchmark: performanceSchema.nullable(),
+  series: z.array(
+    z.object({
+      date: z.string(),
+      value: z.number(),
+      benchmark_value: z.number().nullable(),
+    }),
+  ),
+});
+
 export const metricCoverageSchema = z.object({
   key: z.string(),
   label: z.string(),

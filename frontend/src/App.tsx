@@ -13,6 +13,11 @@ const CompanyPage = lazy(async () => {
   return { default: module.CompanyPage };
 });
 
+const SimulatorPage = lazy(async () => {
+  const module = await import('./pages/SimulatorPage');
+  return { default: module.SimulatorPage };
+});
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1 } },
 });
@@ -30,7 +35,10 @@ export default function App() {
               Stockscope
             </Link>
             <span className="text-xs text-slate-500">Public company screener</span>
-            <Link to="/portfolio" className="ml-auto text-sm text-sky-700 hover:underline">
+            <Link to="/simulator" className="ml-auto text-sm text-sky-700 hover:underline">
+              Simulator
+            </Link>
+            <Link to="/portfolio" className="text-sm text-sky-700 hover:underline">
               Portfolio ({portfolio.holdings.length})
             </Link>
             <Link to="/watchlist" className="text-sm text-sky-700 hover:underline">
@@ -41,6 +49,14 @@ export default function App() {
         <main className="mx-auto max-w-[1600px] px-5 py-5">
           <Routes>
             <Route path="/" element={<ScreenerPage watchlist={watchlist} />} />
+            <Route
+              path="/simulator"
+              element={
+                <Suspense fallback={<p className="text-sm">Loading simulator…</p>}>
+                  <SimulatorPage />
+                </Suspense>
+              }
+            />
             <Route
               path="/watchlist"
               element={<WatchlistPage tickers={watchlist.tickers} onRemove={watchlist.remove} />}
