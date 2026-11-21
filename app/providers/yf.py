@@ -1,11 +1,28 @@
 """Yahoo Finance adapter, used for breadth of TTM ratios."""
 
 from collections.abc import Callable, Iterator
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
-from app.providers.base import FactSeed, HistoricalPriceSeed, QuoteSeed
+from app.providers.base import DividendSeed, FactSeed, HistoricalPriceSeed, QuoteSeed
 from app.providers.values import dec, whole
+
+
+def _date_from_info(value: Any) -> date | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, (int, float)) and value > 0:
+        return datetime.fromtimestamp(value, tz=UTC).date()
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value[:10])
+        except ValueError:
+            return None
+    return None
 
 INFO_FIELDS = {
     "trailingPE": ("pe_ratio", "ratio"),
@@ -41,6 +58,20 @@ class YFinanceProvider:
 
     def list_companies(self) -> Any:
         return iter(())
+
+    def get_dividends(self, ticker: str) -> Iterator[DividendSeed]:
+        info = self._ticker(ticker).info
+        if not info:
+            return
+        ex_date = _date_from_info(info.get("exDividendDate"))
+        if ex_date is None:
+            return
+        yield DividendSeed(
+            ex_date=ex_date,
+            pay_date=_date_from_info(info.get("dividendDate")),
+            amount_per_share=dec(info.get("dividendRate")),
+            source=self.name,
+        )
 
     def get_price_history(self, ticker: str, years: int = 5) -> Iterator[HistoricalPriceSeed]:
         """Daily close and split/dividend-adjusted close from yfinance."""

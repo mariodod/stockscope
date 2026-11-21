@@ -40,6 +40,20 @@ class QuoteSeed:
     source: str = ""
 
 
+@dataclass(frozen=True)
+class DividendSeed:
+    ex_date: date
+    pay_date: date | None = None
+    amount_per_share: Decimal | None = None
+    source: str = ""
+
+
+class DividendProvider(Protocol):
+    name: str
+
+    def get_dividends(self, ticker: str) -> Iterator[DividendSeed]: ...
+
+
 class PriceHistoryProvider(Protocol):
     name: str
 

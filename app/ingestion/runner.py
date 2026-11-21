@@ -10,6 +10,7 @@ from app.db.session import SessionLocal
 from app.ingestion.jobs import (
     backfill_history,
     prune_quotes,
+    refresh_dividends,
     refresh_fundamentals,
     refresh_quotes,
     sync_universe,
@@ -18,7 +19,7 @@ from app.ingestion.jobs import (
 from app.models import Company
 from app.providers import Provider, YFinanceProvider, build_providers
 
-JOBS = ("universe", "quotes", "fundamentals", "history", "prune", "all")
+JOBS = ("universe", "quotes", "fundamentals", "history", "dividends", "prune", "all")
 
 
 def _active_tickers(session: Session, limit: int | None) -> list[str]:
@@ -33,6 +34,15 @@ def run_job(
 ) -> None:
     """Run one ingestion job and record its outcome in RefreshRun."""
     providers = build_providers()
+    if job == "dividends":
+        dividend_provider = YFinanceProvider()
+        with SessionLocal() as session, track_refresh(
+            session, "dividends", dividend_provider.name
+        ) as run:
+            run.rows_written = refresh_dividends(
+                session, dividend_provider, _active_tickers(session, limit)
+            )
+        return
     if job == "prune":
         with SessionLocal() as session, track_refresh(
             session, "prune", "database"

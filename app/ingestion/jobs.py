@@ -8,8 +8,20 @@ from sqlalchemy import delete, select
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session
 
-from app.models import Company, FundamentalFact, MetricDefinition, Quote, RefreshRun
-from app.providers.base import CompanySeed, PriceHistoryProvider, Provider
+from app.models import (
+    Company,
+    DividendEvent,
+    FundamentalFact,
+    MetricDefinition,
+    Quote,
+    RefreshRun,
+)
+from app.providers.base import (
+    CompanySeed,
+    DividendProvider,
+    PriceHistoryProvider,
+    Provider,
+)
 
 
 @contextmanager
@@ -119,6 +131,37 @@ def refresh_quotes(
         quote.fifty_two_week_low = seed.fifty_two_week_low
         quote.source = seed.source or provider.name
         written += 1
+    session.commit()
+    return written
+
+
+def refresh_dividends(
+    session: Session, provider: DividendProvider, tickers: list[str]
+) -> int:
+    """Upsert expected dividend events by company, ex-date and source."""
+    companies = _companies(session)
+    existing = {
+        (event.company_id, event.ex_date, event.source): event
+        for event in session.scalars(select(DividendEvent)).all()
+    }
+    written = 0
+    for ticker in tickers:
+        company = companies.get(ticker)
+        if company is None:
+            continue
+        for seed in provider.get_dividends(ticker):
+            source = seed.source or provider.name
+            key = (company.id, seed.ex_date, source)
+            event = existing.get(key)
+            if event is None:
+                event = DividendEvent(
+                    company_id=company.id, ex_date=seed.ex_date, source=source
+                )
+                session.add(event)
+                existing[key] = event
+            event.pay_date = seed.pay_date
+            event.amount_per_share = seed.amount_per_share
+            written += 1
     session.commit()
     return written
 

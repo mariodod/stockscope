@@ -5,6 +5,7 @@ import { apiGet, apiPost } from './api';
 import {
   companyDetailSchema,
   dataQualitySchema,
+  dividendSchema,
   metricSchema,
   pagedCompaniesSchema,
   screenStateSchema,
@@ -31,6 +32,15 @@ export function useCompany(ticker: string) {
     queryKey: ['company', ticker],
     queryFn: () => apiGet(`/api/v1/companies/${ticker}`, companyDetailSchema),
     enabled: ticker.length > 0,
+  });
+}
+
+export function useDividends(days: number, tickers: string[]) {
+  const query = new URLSearchParams({ days: String(days) });
+  for (const ticker of tickers) query.append('tickers', ticker);
+  return useQuery({
+    queryKey: ['dividends', days, tickers.join(',')],
+    queryFn: () => apiGet(`/api/v1/dividends?${query.toString()}`, z.array(dividendSchema)),
   });
 }
 

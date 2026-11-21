@@ -4,6 +4,7 @@ import { Link, Route, Routes } from 'react-router-dom';
 
 import { usePortfolio } from './lib/portfolio';
 import { useWatchlist } from './lib/watchlist';
+import { DividendsPage } from './pages/DividendsPage';
 import { PortfolioPage } from './pages/PortfolioPage';
 import { ScreenerPage } from './pages/ScreenerPage';
 import { WatchlistPage } from './pages/WatchlistPage';
@@ -35,7 +36,10 @@ export default function App() {
               Stockscope
             </Link>
             <span className="text-xs text-slate-500">Public company screener</span>
-            <Link to="/simulator" className="ml-auto text-sm text-sky-700 hover:underline">
+            <Link to="/dividends" className="ml-auto text-sm text-sky-700 hover:underline">
+              Dividends
+            </Link>
+            <Link to="/simulator" className="text-sm text-sky-700 hover:underline">
               Simulator
             </Link>
             <Link to="/portfolio" className="text-sm text-sky-700 hover:underline">
@@ -60,6 +64,19 @@ export default function App() {
             <Route
               path="/watchlist"
               element={<WatchlistPage tickers={watchlist.tickers} onRemove={watchlist.remove} />}
+            />
+            <Route
+              path="/dividends"
+              element={
+                <DividendsPage
+                  tickers={[
+                    ...new Set([
+                      ...watchlist.tickers,
+                      ...portfolio.holdings.map((holding) => holding.ticker),
+                    ]),
+                  ]}
+                />
+              }
             />
             <Route
               path="/portfolio"

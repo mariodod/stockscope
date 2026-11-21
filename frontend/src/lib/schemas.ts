@@ -134,6 +134,15 @@ export const simulationResultSchema = z.object({
   ),
 });
 
+export const dividendSchema = z.object({
+  ticker: z.string(),
+  company_name: z.string(),
+  ex_date: z.string(),
+  pay_date: z.string().nullable(),
+  amount_per_share: z.number().nullable(),
+  source: z.string(),
+});
+
 export const metricCoverageSchema = z.object({
   key: z.string(),
   label: z.string(),
