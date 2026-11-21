@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -246,6 +247,25 @@ def test_data_quality_reports_coverage_and_staleness(
     assert pe["companies_with_value"] == 3
     assert pe["coverage_pct"] == 75.0
     assert pe["stale_count"] > 0
+
+
+
+def test_data_quality_exposes_refresh_diagnostics(
+    client: TestClient, db_session: Session
+) -> None:
+    from app.ingestion.jobs import track_refresh
+
+    with pytest.raises(ValueError, match="boom"), track_refresh(
+        db_session, "quotes", "fake"
+    ) as run:
+        run.rows_written = 0
+        raise ValueError("boom")
+
+    body = client.get("/api/v1/data-quality").json()
+    failed = next(item for item in body["last_refreshes"] if item["status"] == "failed")
+
+    assert failed["started_at"] is not None
+    assert failed["error"] == "boom"
 
 
 def test_staleness_counts_companies_not_history_rows(

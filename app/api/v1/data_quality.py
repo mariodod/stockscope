@@ -70,8 +70,10 @@ def _build_report(db: DbSession) -> DataQualityReport:
             job=run.job,
             provider=run.provider,
             status=run.status,
+            started_at=run.started_at,
             finished_at=run.finished_at,
             rows_written=run.rows_written,
+            error=run.error,
         )
         for run in runs
     ]

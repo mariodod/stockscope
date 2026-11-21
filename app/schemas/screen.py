@@ -151,8 +151,10 @@ class RefreshSummary(BaseModel):
     job: str
     provider: str | None = None
     status: str
+    started_at: datetime | None = None
     finished_at: datetime | None = None
     rows_written: int
+    error: str | None = None
 
 
 class DataQualityReport(BaseModel):

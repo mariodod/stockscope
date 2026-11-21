@@ -87,10 +87,15 @@ export function ScreenerPage() {
                   ))}
               </ul>
               {qualityQuery.data.last_refreshes[0] && (
-                <p className="mt-2 text-xs text-slate-500">
-                  Last refresh: {qualityQuery.data.last_refreshes[0].job} ·{' '}
-                  {qualityQuery.data.last_refreshes[0].status}
-                </p>
+                <div className="mt-2 text-xs text-slate-500">
+                  <p>
+                    Last refresh: {qualityQuery.data.last_refreshes[0].job} ·{' '}
+                    {qualityQuery.data.last_refreshes[0].status}
+                  </p>
+                  {qualityQuery.data.last_refreshes[0].error && (
+                    <p className="text-red-700">{qualityQuery.data.last_refreshes[0].error}</p>
+                  )}
+                </div>
               )}
             </div>
           )}

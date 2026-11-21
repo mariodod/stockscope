@@ -122,8 +122,10 @@ export const dataQualitySchema = z.object({
       job: z.string(),
       provider: z.string().nullable(),
       status: z.string(),
+      started_at: z.string().nullable(),
       finished_at: z.string().nullable(),
       rows_written: z.number(),
+      error: z.string().nullable(),
     }),
   ),
 });
