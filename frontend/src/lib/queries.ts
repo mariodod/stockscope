@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { apiGet, apiPost } from './api';
@@ -31,6 +31,15 @@ export function useCompany(ticker: string) {
     queryKey: ['company', ticker],
     queryFn: () => apiGet(`/api/v1/companies/${ticker}`, companyDetailSchema),
     enabled: ticker.length > 0,
+  });
+}
+
+export function useCompanies(tickers: string[]) {
+  return useQueries({
+    queries: tickers.map((ticker) => ({
+      queryKey: ['company', ticker],
+      queryFn: () => apiGet(`/api/v1/companies/${ticker}`, companyDetailSchema),
+    })),
   });
 }
 

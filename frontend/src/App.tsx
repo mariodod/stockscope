@@ -2,7 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense, lazy } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 
+import { usePortfolio } from './lib/portfolio';
 import { useWatchlist } from './lib/watchlist';
+import { PortfolioPage } from './pages/PortfolioPage';
 import { ScreenerPage } from './pages/ScreenerPage';
 import { WatchlistPage } from './pages/WatchlistPage';
 
@@ -17,6 +19,7 @@ const queryClient = new QueryClient({
 
 export default function App() {
   const watchlist = useWatchlist();
+  const portfolio = usePortfolio();
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -27,7 +30,10 @@ export default function App() {
               Stockscope
             </Link>
             <span className="text-xs text-slate-500">Public company screener</span>
-            <Link to="/watchlist" className="ml-auto text-sm text-sky-700 hover:underline">
+            <Link to="/portfolio" className="ml-auto text-sm text-sky-700 hover:underline">
+              Portfolio ({portfolio.holdings.length})
+            </Link>
+            <Link to="/watchlist" className="text-sm text-sky-700 hover:underline">
               Watchlist ({watchlist.tickers.length})
             </Link>
           </div>
@@ -38,6 +44,16 @@ export default function App() {
             <Route
               path="/watchlist"
               element={<WatchlistPage tickers={watchlist.tickers} onRemove={watchlist.remove} />}
+            />
+            <Route
+              path="/portfolio"
+              element={
+                <PortfolioPage
+                  holdings={portfolio.holdings}
+                  onAdd={portfolio.add}
+                  onRemove={portfolio.remove}
+                />
+              }
             />
             <Route
               path="/companies/:ticker"
