@@ -103,6 +103,17 @@ export const sortSpecSchema = z.object({
   dir: z.enum(['asc', 'desc']),
 });
 
+export const screenStateSchema = z.object({
+  filters: z.array(filterConditionSchema),
+  sort: z.array(sortSpecSchema),
+  weights: z.record(z.string(), z.number()),
+  limit: z.number(),
+  offset: z.number(),
+});
+export type ScreenState = z.infer<typeof screenStateSchema>;
+
+export const savedScreenSchema = screenStateSchema.extend({ token: z.string() });
+
 export const metricCoverageSchema = z.object({
   key: z.string(),
   label: z.string(),

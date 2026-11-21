@@ -1,15 +1,7 @@
-import { z } from 'zod';
+import { screenStateSchema, type ScreenRequest, type ScreenState } from './schemas';
 
-import { filterConditionSchema, sortSpecSchema, type ScreenRequest } from './schemas';
-
-export const screenStateSchema = z.object({
-  filters: z.array(filterConditionSchema),
-  sort: z.array(sortSpecSchema),
-  weights: z.record(z.string(), z.number()),
-  limit: z.number(),
-  offset: z.number(),
-});
-export type ScreenState = z.infer<typeof screenStateSchema>;
+export { screenStateSchema };
+export type { ScreenState };
 
 export const defaultState: ScreenState = {
   filters: [],

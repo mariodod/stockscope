@@ -75,7 +75,7 @@ npm run dev        # http://localhost:5173 (proxies /api to localhost:8000)
 
 - **Screener** — filter by any metric, sort by one metric, toggle columns, add weighted composite ranking, and paginate.
 - **Company detail** — fundamentals timeline (revenue, EBITDA, EPS) and latest metrics with source and as-of date.
-- **Shareable state** — filters, sort, weights and pagination are encoded in the URL, so a screen can be bookmarked or sent to someone else.
+- **Shareable state** — filters, sort, weights and pagination are encoded in the URL, so a screen can be bookmarked or sent to someone else. **Save screen** stores the state server-side and switches the URL to a short token. There are no user accounts; anyone with the token can read that screen.
 
 ## Data ingestion (M2)
 
@@ -109,6 +109,8 @@ Adapter tests use recorded-style payloads and run in CI without live API calls.
 | `GET` | `/api/v1/companies/{ticker}` | Company detail with latest metrics and history |
 | `GET` | `/api/v1/sectors` | Distinct sectors and industries for filter dropdowns |
 | `GET` | `/api/v1/data-quality` | Metric coverage, staleness and latest refresh runs |
+| `POST` | `/api/v1/screens` | Save a screen and receive a shareable token |
+| `GET` | `/api/v1/screens/{token}` | Load a saved screen |
 | `GET` | `/docs` | Interactive OpenAPI documentation |
 
 Example screen request:
@@ -147,7 +149,7 @@ For the frontend, run `npm --prefix frontend test`, `npm --prefix frontend lint`
 - The FMP quote adapter is covered by fixture tests; a live quote sync needs an `FMP_API_KEY` and was not verified in CI.
 - Free providers can be delayed, rate-limited or incomplete. The `/data-quality` endpoint and dashboard badges expose coverage and staleness, but data accuracy still needs verification against primary sources.
 - Caching defaults to in-process memory. For multi-process deployments, install the `cache` extra (`pip install -e ".[cache]"`) and set `REDIS_URL` to share the cache through Redis.
-- No user accounts or write endpoints; the API is read-only apart from CLI-driven ingestion.
+- No user accounts: saved screens are read-only to anyone with the token and cannot be edited or deleted through the API.
 
 ## Disclaimer
 

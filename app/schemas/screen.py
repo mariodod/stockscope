@@ -79,6 +79,25 @@ class ScreenRequest(BaseModel):
     offset: int = Field(default=0, ge=0)
 
 
+class ScreenState(BaseModel):
+    filters: list[FilterCondition] = Field(default_factory=list)
+    sort: list[SortSpec] = Field(default_factory=list)
+    weights: dict[str, float] = Field(default_factory=dict)
+    limit: int = Field(default=50, ge=1, le=500)
+    offset: int = Field(default=0, ge=0)
+
+    @field_validator("weights")
+    @classmethod
+    def check_weights(cls, value: dict[str, float]) -> dict[str, float]:
+        if any(not math.isfinite(weight) or weight < 0 for weight in value.values()):
+            raise ValueError("weights must be finite and non-negative")
+        return value
+
+
+class SavedScreenRead(ScreenState):
+    token: str
+
+
 class CompanySummary(BaseModel):
     ticker: str
     name: str

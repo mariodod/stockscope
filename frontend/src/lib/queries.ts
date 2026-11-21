@@ -7,6 +7,7 @@ import {
   dataQualitySchema,
   metricSchema,
   pagedCompaniesSchema,
+  screenStateSchema,
   sectorCountsSchema,
   type ScreenRequest,
 } from './schemas';
@@ -30,6 +31,14 @@ export function useCompany(ticker: string) {
     queryKey: ['company', ticker],
     queryFn: () => apiGet(`/api/v1/companies/${ticker}`, companyDetailSchema),
     enabled: ticker.length > 0,
+  });
+}
+
+export function useSavedScreen(token: string | null) {
+  return useQuery({
+    queryKey: ['saved-screen', token],
+    queryFn: () => apiGet(`/api/v1/screens/${token}`, screenStateSchema),
+    enabled: token !== null,
   });
 }
 

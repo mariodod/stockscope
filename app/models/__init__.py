@@ -6,6 +6,7 @@ from app.models.fundamental_fact import FundamentalFact
 from app.models.metric_definition import MetricDefinition, MetricDirection
 from app.models.quote import Quote
 from app.models.refresh_run import RefreshRun
+from app.models.saved_screen import SavedScreen
 
 __all__ = [
     "Base",
@@ -15,4 +16,5 @@ __all__ = [
     "MetricDirection",
     "Quote",
     "RefreshRun",
+    "SavedScreen",
 ]

@@ -5,13 +5,27 @@ import { useNavigate } from 'react-router-dom';
 import { FilterBar } from '../components/FilterBar';
 import { MetricsTable } from '../components/MetricsTable';
 import { RankingPanel } from '../components/RankingPanel';
-import { useDataQuality, useMetrics, useScreen, useSectors } from '../lib/queries';
+import { apiPost } from '../lib/api';
+import {
+  useDataQuality,
+  useMetrics,
+  useSavedScreen,
+  useScreen,
+  useSectors,
+} from '../lib/queries';
+import { savedScreenSchema } from '../lib/schemas';
 import { defaultState, readState, stateToRequest, writeState, type ScreenState } from '../lib/state';
 
 export function ScreenerPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const state = useMemo(() => readState(params.get('s')), [params]);
+  const encodedState = params.get('s');
+  const savedToken = encodedState === null ? params.get('screen') : null;
+  const savedQuery = useSavedScreen(savedToken);
+  const state = useMemo(
+    () => (encodedState !== null ? readState(encodedState) : (savedQuery.data ?? defaultState)),
+    [encodedState, savedQuery.data],
+  );
   const metricsQuery = useMetrics();
   const metrics = useMemo(() => metricsQuery.data ?? [], [metricsQuery.data]);
   const request = useMemo(
@@ -24,6 +38,11 @@ export function ScreenerPage() {
 
   function update(next: ScreenState) {
     setParams(new URLSearchParams({ s: writeState(next) }), { replace: true });
+  }
+
+  async function saveScreen() {
+    const saved = await apiPost('/api/v1/screens', savedScreenSchema, state);
+    setParams(new URLSearchParams({ screen: saved.token }), { replace: true });
   }
 
   const rows = screenQuery.data?.items ?? [];
@@ -153,6 +172,13 @@ export function ScreenerPage() {
               <p className="text-sm text-slate-500">{total} companies match</p>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded bg-slate-800 px-3 py-1 text-sm text-white"
+                onClick={() => void saveScreen()}
+              >
+                Save screen
+              </button>
               <button
                 type="button"
                 className="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-40"
