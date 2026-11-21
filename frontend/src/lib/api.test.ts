@@ -32,7 +32,7 @@ describe('api error shapes', () => {
 
     const result = await exportScreen({ filters: [], sort: [], limit: 50, offset: 0 });
 
-    expect(result).toBeInstanceOf(Blob);
+    expect(result.size).toBeGreaterThan(0);
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/screen/export',
       expect.objectContaining({ method: 'POST' }),
