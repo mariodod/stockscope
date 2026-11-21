@@ -1,6 +1,5 @@
 import { screenStateSchema, type ScreenRequest, type ScreenState } from './schemas';
 
-export { screenStateSchema };
 export type { ScreenState };
 
 export const defaultState: ScreenState = {

@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { z } from 'zod';
 
-import type { Filing } from './schemas';
+import { tickerSchema, type Filing } from './schemas';
+import { useStoredState } from './storage';
 
 const STORAGE_KEY = 'stockscope.alerts';
 
 export const alertSchema = z.object({
   id: z.string(),
-  ticker: z.string().regex(/^[A-Z0-9.-]{1,16}$/),
+  ticker: tickerSchema,
   metric: z.string().min(1),
   op: z.enum(['lt', 'lte', 'gt', 'gte']),
   threshold: z.number().finite(),
@@ -18,7 +19,7 @@ export type Alert = z.infer<typeof alertSchema>;
 export const filingAlertSchema = z.object({
   id: z.string(),
   kind: z.literal('filing'),
-  ticker: z.string().regex(/^[A-Z0-9.-]{1,16}$/),
+  ticker: tickerSchema,
   forms: z.array(z.string()).default([]),
   lastSeen: z.string(),
   seenAccessions: z.array(z.string()).default([]),
@@ -34,54 +35,25 @@ export function isFilingAlert(alert: AnyAlert): alert is FilingAlert {
   return 'kind' in alert && alert.kind === 'filing';
 }
 
-function read(storage: Storage): AnyAlert[] {
-  try {
-    const raw: unknown = JSON.parse(storage.getItem(STORAGE_KEY) ?? '[]');
-    const parsed = alertsSchema.safeParse(raw);
-    return parsed.success ? parsed.data : [];
-  } catch {
-    return [];
-  }
-}
-
-function write(storage: Storage, alerts: AnyAlert[]): void {
-  try {
-    storage.setItem(STORAGE_KEY, JSON.stringify(alerts));
-  } catch {
-    // Keep alerts in memory when storage is unavailable.
-  }
-}
+const EMPTY: never[] = [];
 
 export function useAlerts() {
-  const [alerts, setAlerts] = useState<AnyAlert[]>(() => read(window.localStorage));
-
-  useEffect(() => {
-    const sync = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY) setAlerts(read(window.localStorage));
-    };
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, []);
-
-  const update = useCallback((next: AnyAlert[]) => {
-    setAlerts(next);
-    write(window.localStorage, next);
-  }, []);
+  const [alerts, setAlerts] = useStoredState<AnyAlert[]>(STORAGE_KEY, alertsSchema, EMPTY);
 
   const addAlert = useCallback(
-    (alert: AnyAlert) => update([...alerts, alert]),
-    [alerts, update],
+    (alert: AnyAlert) => setAlerts((current) => [...current, alert]),
+    [setAlerts],
   );
 
   const remove = useCallback(
-    (id: string) => update(alerts.filter((alert) => alert.id !== id)),
-    [alerts, update],
+    (id: string) => setAlerts((current) => current.filter((alert) => alert.id !== id)),
+    [setAlerts],
   );
 
   const markFilingSeen = useCallback(
     (id: string, lastSeen: string, accessions: string[]) =>
-      update(
-        alerts.map((alert) =>
+      setAlerts((current) =>
+        current.map((alert) =>
           alert.id === id && isFilingAlert(alert)
             ? {
                 ...alert,
@@ -91,7 +63,7 @@ export function useAlerts() {
             : alert,
         ),
       ),
-    [alerts, update],
+    [setAlerts],
   );
 
   return { alerts, addAlert, remove, markFilingSeen };

@@ -2,22 +2,13 @@ import { useState } from 'react';
 
 import {
   filterConditionSchema,
+  filterOpSchema,
   type FilterCondition,
   type FilterOp,
   type Metric,
 } from '../lib/schemas';
 
-const OPERATORS: FilterOp[] = [
-  'eq',
-  'neq',
-  'gt',
-  'gte',
-  'lt',
-  'lte',
-  'between',
-  'in',
-  'is_null',
-];
+const OPERATORS: FilterOp[] = filterOpSchema.options;
 
 function initialValue(row: FilterCondition): string {
   if (Array.isArray(row.value)) return row.value.join(', ');

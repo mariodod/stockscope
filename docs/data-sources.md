@@ -22,14 +22,7 @@ No provider is a hard dependency of the API or UI. All external data enters thro
 
 ## Adapter contract
 
-```python
-class Provider(Protocol):
-    name: str
-
-    def list_companies(self) -> Iterator[CompanySeed]: ...
-    def get_quote(self, ticker: str) -> Quote: ...
-    def get_fundamentals(self, ticker: str) -> list[FundamentalFact]: ...
-```
+The current protocols and canonical seed types live in [`app/providers/base.py`](../app/providers/base.py). Adapters implement the capabilities they support: universe listing, quotes, fundamentals, price history, dividends and SEC filings.
 
 Rules every adapter must follow:
 

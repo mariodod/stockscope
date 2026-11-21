@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export const TICKER_PATTERN = /^[A-Z0-9.-]{1,16}$/;
+export const tickerSchema = z.string().regex(TICKER_PATTERN);
+
 export const metricDirectionSchema = z.enum(['high', 'low', 'neutral', 'none']);
 
 export const metricSchema = z.object({
@@ -158,15 +161,6 @@ export const fairValueSchema = z.object({
   ),
 });
 
-export type Filing = {
-  ticker: string;
-  company_name: string;
-  accession_number: string;
-  form: string;
-  filing_date: string;
-  primary_document: string | null;
-};
-
 export const filingSchema = z.object({
   ticker: z.string(),
   company_name: z.string(),
@@ -175,6 +169,7 @@ export const filingSchema = z.object({
   filing_date: z.string(),
   primary_document: z.string().nullable(),
 });
+export type Filing = z.infer<typeof filingSchema>;
 
 export const dividendSchema = z.object({
   ticker: z.string(),
@@ -212,12 +207,11 @@ export const dataQualitySchema = z.object({
   ),
 });
 
-export const screenRequestSchema = z.object({
-  filters: z.array(filterConditionSchema),
-  sort: z.array(sortSpecSchema),
-  columns: z.array(z.string()),
-  ranking: z.object({ weights: z.record(z.string(), z.number()) }).nullable(),
-  limit: z.number(),
-  offset: z.number(),
-});
-export type ScreenRequest = z.infer<typeof screenRequestSchema>;
+export type ScreenRequest = {
+  filters: z.infer<typeof filterConditionSchema>[];
+  sort: z.infer<typeof sortSpecSchema>[];
+  columns: string[];
+  ranking: { weights: Record<string, number> } | null;
+  limit: number;
+  offset: number;
+};

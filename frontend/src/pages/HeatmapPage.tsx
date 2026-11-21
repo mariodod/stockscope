@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useSectorPerformance } from '../lib/queries';
+import { defaultState, writeState } from '../lib/state';
 
 function tileColor(change: number): string {
   const intensity = Math.min(Math.abs(change) / 15, 0.85);
@@ -50,16 +51,13 @@ export function HeatmapPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {sectors.map((sector) => {
             const state = {
-              filters: [{ metric: 'sector', op: 'eq', value: sector.sector }],
-              sort: [{ metric: 'market_cap', dir: 'desc' }],
-              weights: {},
-              limit: 25,
-              offset: 0,
+              ...defaultState,
+              filters: [{ metric: 'sector', op: 'eq' as const, value: sector.sector }],
             };
             return (
               <Link
                 key={sector.sector}
-                to={`/?s=${encodeURIComponent(JSON.stringify(state))}`}
+                to={`/?s=${encodeURIComponent(writeState(state))}`}
                 className="rounded border border-slate-200 p-4"
                 style={{ backgroundColor: tileColor(sector.return_pct) }}
               >

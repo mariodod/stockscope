@@ -10,6 +10,7 @@ import {
   YAxis,
 } from 'recharts';
 import { Link } from 'react-router-dom';
+import type { z } from 'zod';
 
 import { apiPost, ApiError } from '../lib/api';
 import { simulationResultSchema } from '../lib/schemas';
@@ -24,20 +25,7 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-type Result = {
-  performance: {
-    final_value: number;
-    total_contributed: number;
-    total_return_pct: number;
-    annualised_return_pct: number;
-    max_drawdown_pct: number;
-  };
-  benchmark: {
-    final_value: number;
-    total_return_pct: number;
-  } | null;
-  series: { date: string; value: number; benchmark_value: number | null }[];
-};
+type Result = z.infer<typeof simulationResultSchema>;
 
 export function SimulatorPage() {
   const [tickers, setTickers] = useState('AAPL');
