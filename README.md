@@ -45,7 +45,7 @@ cp .env.example .env                 # set POSTGRES_PASSWORD, then set DATABASE_
 docker compose up -d db              # PostgreSQL on 127.0.0.1:5432
 
 alembic upgrade head                 # create schema
-python -m app.seed.metrics           # load 38 metrics from the packaged catalog
+python -m app.seed.metrics           # load 40 metrics from the packaged catalog
 uvicorn app.main:app --reload        # API: http://localhost:8000/docs
 ```
 

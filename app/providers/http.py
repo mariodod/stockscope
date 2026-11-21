@@ -57,4 +57,3 @@ def fetch_json(
         if response.is_error:
             raise ProviderHttpError(f"HTTP {response.status_code} from {url}")
         return response.json()
-    raise ProviderHttpError(f"request failed: {url}")

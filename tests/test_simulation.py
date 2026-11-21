@@ -76,6 +76,81 @@ def test_dca_simulation(client: TestClient, db_session: Session) -> None:
     assert round(body["performance"]["final_value"], 2) == 210
 
 
+def test_multi_ticker_dca_counts_each_ticker(client: TestClient, db_session: Session) -> None:
+    _seed_prices(db_session)
+
+    response = client.post(
+        "/api/v1/simulate",
+        json={
+            "tickers": ["AAPL", "SPY"],
+            "start": "2025-01-01",
+            "end": "2025-12-31",
+            "initial": 0,
+            "contribution": 100,
+            "strategy": "dca",
+            "benchmark": None,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["performance"]["total_contributed"] == 200
+    assert body["performance"]["final_value"] == 210
+    assert body["performance"]["total_return_pct"] == 5
+
+
+def test_simulation_falls_back_to_price_without_adjusted_close(
+    client: TestClient, db_session: Session
+) -> None:
+    seed_metrics(db_session)
+    company = Company(ticker="RAW", name="Raw price")
+    db_session.add(company)
+    db_session.flush()
+    db_session.add(
+        Quote(
+            company_id=company.id,
+            date=date(2025, 1, 2),
+            price=Decimal("100"),
+            source="test",
+        )
+    )
+    db_session.commit()
+
+    response = client.post(
+        "/api/v1/simulate",
+        json={
+            "tickers": ["RAW"],
+            "start": "2025-01-01",
+            "end": "2025-12-31",
+            "initial": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["performance"]["final_value"] == 1000
+
+
+def test_simulation_compares_benchmark(client: TestClient, db_session: Session) -> None:
+    _seed_prices(db_session)
+
+    response = client.post(
+        "/api/v1/simulate",
+        json={
+            "tickers": ["AAPL"],
+            "start": "2025-01-01",
+            "end": "2025-12-31",
+            "initial": 1000,
+            "strategy": "lump_sum",
+            "benchmark": "SPY",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["benchmark"]["final_value"] == 1100
+    assert all(point["benchmark_value"] is not None for point in body["series"])
+
+
 def test_simulation_reports_missing_history(client: TestClient, db_session: Session) -> None:
     _seed_prices(db_session)
 

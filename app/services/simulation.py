@@ -3,7 +3,7 @@
 from datetime import date
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Company, Quote
@@ -20,7 +20,12 @@ def _price_series(
     db: Session, ticker: str, request: SimulationRequest
 ) -> list[tuple[date, float]]:
     rows = db.execute(
-        select(Quote.date, Quote.adjusted_close if request.dividend_reinvestment else Quote.price)
+        select(
+            Quote.date,
+            func.coalesce(Quote.adjusted_close, Quote.price)
+            if request.dividend_reinvestment
+            else Quote.price,
+        )
         .join(Company, Company.id == Quote.company_id)
         .where(
             Company.ticker == ticker.upper(),
@@ -66,17 +71,18 @@ def _performance(series: list[tuple[date, float]], contributed: float) -> Perfor
 
 
 def _simulate_one(
-    series: list[tuple[date, float]], request: SimulationRequest, investment: float
+    series: list[tuple[date, float]],
+    strategy: Strategy,
+    investment: float,
+    per_purchase: float,
 ) -> list[tuple[date, float]]:
-    purchase_days = _first_of_month(series) if request.strategy is Strategy.DCA else {series[0][0]}
+    purchase_days = _first_of_month(series) if strategy is Strategy.DCA else {series[0][0]}
+    amount = per_purchase if strategy is Strategy.DCA else investment
     shares = 0.0
-    total_invested = 0.0
     result: list[tuple[date, float]] = []
     for day, price in series:
         if day in purchase_days and price > 0:
-            amount = request.contribution if request.strategy is Strategy.DCA else investment
             shares += amount / price
-            total_invested += amount
         result.append((day, shares * price))
     return result
 
@@ -94,8 +100,9 @@ def simulate(db: Session, request: SimulationRequest) -> SimulationResult:
     for series in series_by_ticker.values():
         unit = _simulate_one(
             series,
-            request,
+            request.strategy,
             request.initial / len(series_by_ticker),
+            request.contribution / len(series_by_ticker),
         )
         for day, value in unit:
             combined[day] = combined.get(day, 0.0) + value
@@ -111,7 +118,9 @@ def simulate(db: Session, request: SimulationRequest) -> SimulationResult:
     if request.benchmark and request.benchmark.upper() not in {t.upper() for t in request.tickers}:
         bench = _price_series(db, request.benchmark, request)
         if bench:
-            benchmark_curve = dict(_simulate_one(bench, request, request.initial))
+            benchmark_curve = dict(
+                _simulate_one(bench, request.strategy, request.initial, request.contribution)
+            )
             bench_contributed = (
                 request.contribution * len(_first_of_month(bench))
                 if request.strategy is Strategy.DCA

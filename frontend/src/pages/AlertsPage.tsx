@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import {
+  alertNotificationKey,
   alertSchema,
   filingAlertSchema,
   isFilingAlert,
   isTriggered,
+  matchingFilings,
   notify,
   requestNotificationPermission,
   type Alert,
@@ -64,12 +66,11 @@ function FilingAlertRow({
   onRemove: (id: string) => void;
   onMarkSeen: (id: string, lastSeen: string) => void;
 }) {
-  const newFilings = filings.filter(
-    (filing) =>
-      filing.filing_date.slice(0, 10) > alert.lastSeen.slice(0, 10) &&
-      (alert.forms.length === 0 || alert.forms.includes(filing.form)),
-  );
-  const latest = filings.map((filing) => filing.filing_date.slice(0, 10)).sort().at(-1);
+  const newFilings = matchingFilings(alert, filings);
+  const latest = newFilings
+    .map((filing) => filing.filing_date.slice(0, 10))
+    .sort()
+    .at(-1);
 
   return (
     <tr className="border-t border-slate-100">
@@ -147,20 +148,20 @@ export function AlertsPage({
           (item) => item.metric_key === alert.metric,
         )?.value,
       );
-      if (isTriggered(metricValue, alert.op, alert.threshold) && !notified.current.has(alert.id)) {
-        notified.current.add(alert.id);
+      const key = alertNotificationKey(alert);
+      if (isTriggered(metricValue, alert.op, alert.threshold) && !notified.current.has(key)) {
+        notified.current.add(key);
         notify('Stockscope alert', `${alert.ticker}: ${alert.metric} ${alert.op} ${alert.threshold}`);
       }
     });
     filingAlerts.forEach((alert) => {
-      const count = filings.filter(
-        (filing) =>
-          filing.ticker === alert.ticker &&
-          filing.filing_date.slice(0, 10) > alert.lastSeen.slice(0, 10) &&
-          (alert.forms.length === 0 || alert.forms.includes(filing.form)),
+      const count = matchingFilings(
+        alert,
+        filings.filter((filing) => filing.ticker === alert.ticker),
       ).length;
-      if (count > 0 && !notified.current.has(alert.id)) {
-        notified.current.add(alert.id);
+      const key = alertNotificationKey(alert);
+      if (count > 0 && !notified.current.has(key)) {
+        notified.current.add(key);
         notify('Stockscope filing alert', `${alert.ticker}: ${count} new filing(s)`);
       }
     });

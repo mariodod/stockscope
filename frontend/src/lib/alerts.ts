@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
 
+import type { Filing } from './schemas';
+
 const STORAGE_KEY = 'stockscope.alerts';
 
 export const alertSchema = z.object({
@@ -94,6 +96,20 @@ export function isTriggered(value: number | null, op: Alert['op'], threshold: nu
   if (op === 'lte') return value <= threshold;
   if (op === 'gt') return value > threshold;
   return value >= threshold;
+}
+
+export function matchingFilings(alert: FilingAlert, filings: Filing[]): Filing[] {
+  return filings.filter(
+    (filing) =>
+      filing.ticker === alert.ticker &&
+      filing.filing_date.slice(0, 10) > alert.lastSeen.slice(0, 10) &&
+      (alert.forms.length === 0 || alert.forms.includes(filing.form)),
+  );
+}
+
+export function alertNotificationKey(alert: AnyAlert): string {
+  if (isFilingAlert(alert)) return `${alert.id}:${alert.lastSeen}`;
+  return `${alert.id}:${alert.op}:${alert.threshold}`;
 }
 
 export function notify(title: string, body: string): void {

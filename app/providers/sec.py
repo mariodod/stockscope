@@ -18,8 +18,6 @@ SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 TAG_MAP = {
     "Revenues": ("revenue", "currency"),
     "RevenueFromContractWithCustomerExcludingAssessedTax": ("revenue", "currency"),
-    "OperatingIncomeLoss": ("operating_income", "currency"),
-    "DepreciationDepletionAndAmortization": ("depreciation", "currency"),
     "EarningsPerShareDiluted": ("eps_ttm", "currency"),
     "CashAndCashEquivalentsAtCarryingValue": ("cash_and_equivalents", "currency"),
 }

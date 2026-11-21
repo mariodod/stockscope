@@ -1,7 +1,14 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { isFilingAlert, isTriggered, notify, useAlerts } from './alerts';
+import {
+  alertNotificationKey,
+  isFilingAlert,
+  isTriggered,
+  matchingFilings,
+  notify,
+  useAlerts,
+} from './alerts';
 
 describe('alerts', () => {
   beforeEach(() => {
@@ -52,6 +59,41 @@ describe('alerts', () => {
     expect(isTriggered(25, 'lte', 20)).toBe(false);
     expect(isTriggered(25, 'gte', 20)).toBe(true);
     expect(isTriggered(null, 'lt', 20)).toBe(false);
+  });
+
+  it('matches only relevant filings and changes notification key on acknowledgement', () => {
+    const alert = {
+      id: '3',
+      kind: 'filing' as const,
+      ticker: 'MSFT',
+      forms: ['10-K'],
+      lastSeen: '2026-01-01',
+      createdAt: '2026-01-01',
+    };
+    const filings = [
+      {
+        ticker: 'MSFT',
+        company_name: 'Microsoft',
+        accession_number: '1',
+        form: '10-K',
+        filing_date: '2026-02-01',
+        primary_document: null,
+      },
+      {
+        ticker: 'MSFT',
+        company_name: 'Microsoft',
+        accession_number: '2',
+        form: '8-K',
+        filing_date: '2026-03-01',
+        primary_document: null,
+      },
+    ];
+
+    const matched = matchingFilings(alert, filings);
+    expect(matched).toHaveLength(1);
+    expect(matched[0]?.form).toBe('10-K');
+    expect(alertNotificationKey(alert)).toBe('3:2026-01-01');
+    expect(alertNotificationKey({ ...alert, lastSeen: '2026-02-01' })).toBe('3:2026-02-01');
   });
 
   it('only sends browser notifications when permission is granted', () => {

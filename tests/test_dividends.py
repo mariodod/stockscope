@@ -14,6 +14,13 @@ from app.providers.base import DividendSeed
 from app.providers.yf import YFinanceProvider
 
 
+def test_yfinance_handles_millisecond_epochs() -> None:
+    from app.providers.yf import _date_from_info
+
+    assert _date_from_info(1767225600000) == date(2026, 1, 1)
+    assert _date_from_info(10**20) is None
+
+
 def test_yfinance_maps_dividend_dates() -> None:
     class FakeTicker:
         info = {
