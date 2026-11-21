@@ -11,6 +11,7 @@ import {
   pagedCompaniesSchema,
   screenStateSchema,
   sectorCountsSchema,
+  sectorPerformanceSchema,
   type ScreenRequest,
 } from './schemas';
 
@@ -33,6 +34,14 @@ export function useCompany(ticker: string) {
     queryKey: ['company', ticker],
     queryFn: () => apiGet(`/api/v1/companies/${ticker}`, companyDetailSchema),
     enabled: ticker.length > 0,
+  });
+}
+
+export function useSectorPerformance(days: number) {
+  return useQuery({
+    queryKey: ['sector-performance', days],
+    queryFn: () =>
+      apiGet(`/api/v1/sector-performance?days=${days}`, z.array(sectorPerformanceSchema)),
   });
 }
 

@@ -7,6 +7,7 @@ from app.api.v1 import (
     data_quality,
     dividends,
     health,
+    heatmap,
     metrics,
     screen,
     screens,
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/api/v1")
 router.include_router(health.router)
 router.include_router(simulation.router)
 router.include_router(dividends.router)
+router.include_router(heatmap.router)
 router.include_router(screens.router)
 router.include_router(metrics.router)
 router.include_router(data_quality.router)

@@ -5,6 +5,7 @@ import { Link, Route, Routes } from 'react-router-dom';
 import { usePortfolio } from './lib/portfolio';
 import { useWatchlist } from './lib/watchlist';
 import { DividendsPage } from './pages/DividendsPage';
+import { HeatmapPage } from './pages/HeatmapPage';
 import { PortfolioPage } from './pages/PortfolioPage';
 import { ScreenerPage } from './pages/ScreenerPage';
 import { WatchlistPage } from './pages/WatchlistPage';
@@ -36,7 +37,10 @@ export default function App() {
               Stockscope
             </Link>
             <span className="text-xs text-slate-500">Public company screener</span>
-            <Link to="/dividends" className="ml-auto text-sm text-sky-700 hover:underline">
+            <Link to="/heatmap" className="ml-auto text-sm text-sky-700 hover:underline">
+              Heatmap
+            </Link>
+            <Link to="/dividends" className="text-sm text-sky-700 hover:underline">
               Dividends
             </Link>
             <Link to="/simulator" className="text-sm text-sky-700 hover:underline">
@@ -65,6 +69,7 @@ export default function App() {
               path="/watchlist"
               element={<WatchlistPage tickers={watchlist.tickers} onRemove={watchlist.remove} />}
             />
+            <Route path="/heatmap" element={<HeatmapPage />} />
             <Route
               path="/dividends"
               element={

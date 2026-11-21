@@ -134,6 +134,14 @@ export const simulationResultSchema = z.object({
   ),
 });
 
+export const sectorPerformanceSchema = z.object({
+  sector: z.string(),
+  companies: z.number(),
+  return_pct: z.number(),
+  avg_pe: z.number().nullable(),
+  total_market_cap: z.number().nullable(),
+});
+
 export const fairValueSchema = z.object({
   ticker: z.string(),
   forward_eps: z.number(),
