@@ -35,6 +35,14 @@ jobs:
           alembic upgrade head
           python -m app.seed.metrics
 
+      - name: Verify migration rollback
+        env:
+          DATABASE_URL: sqlite:///./ci-migration-check.db
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
