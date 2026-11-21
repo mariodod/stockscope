@@ -18,10 +18,19 @@ interface MetricsTableProps {
   rows: CompanySummary[];
   metrics: Metric[];
   onSelect: (ticker: string) => void;
+  isWatched: (ticker: string) => boolean;
+  onToggleWatch: (ticker: string) => void;
 }
 
-export function MetricsTable({ rows, metrics, onSelect }: MetricsTableProps) {
+export function MetricsTable({
+  rows,
+  metrics,
+  onSelect,
+  isWatched,
+  onToggleWatch,
+}: MetricsTableProps) {
   const [visibility, setVisibility] = useState<VisibilityState>({
+    watch: true,
     ticker: true,
     name: true,
     sector: true,
@@ -43,6 +52,30 @@ export function MetricsTable({ rows, metrics, onSelect }: MetricsTableProps) {
   }, [metrics]);
 
   const columns = [
+    helper.display({
+      id: 'watch',
+      header: '☆',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const ticker = row.original.ticker;
+        const watched = isWatched(ticker);
+        return (
+          <button
+            type="button"
+            aria-label={`${watched ? 'Unstar' : 'Star'} ${ticker}`}
+            title={watched ? 'Remove from watchlist' : 'Add to watchlist'}
+            className={watched ? 'text-amber-500' : 'text-slate-300 hover:text-amber-500'}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleWatch(ticker);
+            }}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            {watched ? '★' : '☆'}
+          </button>
+        );
+      },
+    }),
     helper.accessor('ticker', { header: 'Ticker', enableSorting: false }),
     helper.accessor('name', { header: 'Company', enableSorting: false }),
     helper.accessor('sector', { header: 'Sector', enableSorting: false }),

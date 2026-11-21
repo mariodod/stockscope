@@ -15,8 +15,11 @@ import {
 } from '../lib/queries';
 import { savedScreenSchema } from '../lib/schemas';
 import { defaultState, readState, stateToRequest, writeState, type ScreenState } from '../lib/state';
+import type { useWatchlist } from '../lib/watchlist';
 
-export function ScreenerPage() {
+type Watchlist = ReturnType<typeof useWatchlist>;
+
+export function ScreenerPage({ watchlist }: { watchlist: Watchlist }) {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const encodedState = params.get('s');
@@ -224,6 +227,8 @@ export function ScreenerPage() {
           <MetricsTable
             rows={rows}
             metrics={metrics}
+            isWatched={watchlist.isWatched}
+            onToggleWatch={watchlist.toggle}
             onSelect={(ticker) => navigate(`/companies/${ticker}?s=${encodeURIComponent(params.get('s') ?? '')}`)}
           />
         </section>
