@@ -2,17 +2,19 @@
 import { Link } from 'react-router-dom';
 
 import { formatMetric, toNumber } from '../lib/format';
+import { transactionSchema, type Holding, type Transaction } from '../lib/portfolio';
 import { useCompanies } from '../lib/queries';
-import { holdingSchema, type Holding } from '../lib/portfolio';
 
 function HoldingRow({
   holding,
   company,
-  onRemove,
+  contributionPct,
+  onClose,
 }: {
   holding: Holding;
   company: ReturnType<typeof useCompanies>[number]['data'];
-  onRemove: (ticker: string) => void;
+  contributionPct: number | null;
+  onClose: (ticker: string) => void;
 }) {
   const priceMetric = company?.latest_metrics.find((metric) => metric.metric_key === 'price');
   const price = toNumber(priceMetric?.value);
@@ -27,22 +29,27 @@ function HoldingRow({
           {holding.ticker}
         </Link>
       </td>
-      <td className="px-3 py-2">{company?.name ?? 'â€¦'}</td>
+      <td className="px-3 py-2">{company?.name ?? '\u2026'}</td>
       <td className="tabular px-3 py-2">{holding.shares}</td>
       <td className="tabular px-3 py-2">{formatMetric(holding.costBasis, 'currency')}</td>
-      <td className="tabular px-3 py-2">{value === null ? 'â€”' : formatMetric(value, 'currency')}</td>
+      <td className="tabular px-3 py-2">
+        {value === null ? '\u2014' : formatMetric(value, 'currency')}
+      </td>
       <td
         className={`tabular px-3 py-2 ${pnl !== null && pnl < 0 ? 'text-red-700' : 'text-green-700'}`}
       >
-        {pnl === null ? 'â€”' : formatMetric(pnl, 'currency')}
+        {pnl === null ? '\u2014' : formatMetric(pnl, 'currency')}
+      </td>
+      <td className="tabular px-3 py-2">
+        {contributionPct === null ? '\u2014' : `${contributionPct.toFixed(2)}%`}
       </td>
       <td className="px-3 py-2">
         <button
           type="button"
           className="text-sm text-red-600"
-          onClick={() => onRemove(holding.ticker)}
+          onClick={() => onClose(holding.ticker)}
         >
-          Remove
+          Close
         </button>
       </td>
     </tr>
@@ -51,26 +58,30 @@ function HoldingRow({
 
 export function PortfolioPage({
   holdings,
-  onAdd,
-  onRemove,
+  transactions,
+  onAddTransaction,
+  onClosePosition,
 }: {
   holdings: Holding[];
-  onAdd: (holding: Holding) => void;
-  onRemove: (ticker: string) => void;
+  transactions: Transaction[];
+  onAddTransaction: (transaction: Transaction) => void;
+  onClosePosition: (ticker: string) => void;
 }) {
   const [ticker, setTicker] = useState('');
+  const [side, setSide] = useState<'buy' | 'sell'>('buy');
   const [shares, setShares] = useState('1');
-  const [costBasis, setCostBasis] = useState('0');
+  const [price, setPrice] = useState('0');
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [error, setError] = useState('');
   const companies = useCompanies(holdings.map((holding) => holding.ticker));
 
   const priced = holdings.flatMap((holding, index) => {
     const company = companies[index]?.data;
-    const price = toNumber(
+    const current = toNumber(
       company?.latest_metrics.find((metric) => metric.metric_key === 'price')?.value,
     );
-    if (price === null) return [];
-    return [{ holding, company, value: holding.shares * price }];
+    if (current === null) return [];
+    return [{ holding, company, value: holding.shares * current }];
   });
   const totalValue = priced.reduce((sum, row) => sum + row.value, 0);
   const totalCost = priced.reduce(
@@ -86,18 +97,27 @@ export function PortfolioPage({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const parsed = holdingSchema.safeParse({
+    const parsed = transactionSchema.safeParse({
+      id: crypto.randomUUID(),
       ticker: ticker.trim().toUpperCase(),
+      side,
       shares: Number(shares),
-      costBasis: Number(costBasis),
-      addedAt: new Date().toISOString(),
+      price: Number(price),
+      date: new Date(date).toISOString(),
     });
     if (!parsed.success) {
-      setError('Enter a valid ticker, a positive number of shares and a non-negative cost.');
+      setError('Enter a valid ticker, positive shares, a non-negative price and a date.');
       return;
     }
+    if (parsed.data.side === 'sell') {
+      const held = holdings.find((holding) => holding.ticker === parsed.data.ticker);
+      if (!held || parsed.data.shares > held.shares) {
+        setError('Cannot sell more shares than are held.');
+        return;
+      }
+    }
     setError('');
-    onAdd(parsed.data);
+    onAddTransaction(parsed.data);
     setTicker('');
   }
 
@@ -132,7 +152,7 @@ export function PortfolioPage({
                 <li key={sector} className="flex justify-between">
                   <span>{sector}</span>
                   <span className="tabular">
-                    {totalValue > 0 ? `${((value / totalValue) * 100).toFixed(1)}%` : 'â€”'}
+                    {totalValue > 0 ? `${((value / totalValue) * 100).toFixed(1)}%` : '\u2014'}
                   </span>
                 </li>
               ))}
@@ -154,36 +174,56 @@ export function PortfolioPage({
           />
         </label>
         <label className="text-sm">
+          Side
+          <select
+            className="ml-2 rounded border border-slate-300 px-2 py-1"
+            value={side}
+            onChange={(event) => setSide(event.target.value as 'buy' | 'sell')}
+          >
+            <option value="buy">Buy</option>
+            <option value="sell">Sell</option>
+          </select>
+        </label>
+        <label className="text-sm">
           Shares
           <input
             type="number"
             min="0"
             step="any"
-            className="ml-2 w-24 rounded border border-slate-300 px-2 py-1"
+            className="ml-2 w-20 rounded border border-slate-300 px-2 py-1"
             value={shares}
             onChange={(event) => setShares(event.target.value)}
           />
         </label>
         <label className="text-sm">
-          Cost per share
+          Price/share
           <input
             type="number"
             min="0"
             step="any"
-            className="ml-2 w-28 rounded border border-slate-300 px-2 py-1"
-            value={costBasis}
-            onChange={(event) => setCostBasis(event.target.value)}
+            className="ml-2 w-24 rounded border border-slate-300 px-2 py-1"
+            value={price}
+            onChange={(event) => setPrice(event.target.value)}
+          />
+        </label>
+        <label className="text-sm">
+          Date
+          <input
+            type="date"
+            className="ml-2 rounded border border-slate-300 px-2 py-1"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
           />
         </label>
         <button type="submit" className="rounded bg-slate-800 px-3 py-1 text-sm text-white">
-          Add holding
+          Add transaction
         </button>
         {error && <p className="w-full text-sm text-red-700">{error}</p>}
       </form>
 
       {holdings.length === 0 ? (
         <p className="rounded border border-slate-200 bg-white p-4 text-sm text-slate-500">
-          No holdings yet. Add one above to track value and unrealised P/L.
+          No holdings yet. Add a buy transaction to start tracking value and unrealised P/L.
         </p>
       ) : (
         <div className="overflow-auto rounded border border-slate-200 bg-white">
@@ -196,22 +236,64 @@ export function PortfolioPage({
                 <th className="px-3 py-2">Cost/share</th>
                 <th className="px-3 py-2">Value</th>
                 <th className="px-3 py-2">Unrealised P/L</th>
+                <th className="px-3 py-2">Contribution</th>
                 <th className="px-3 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {holdings.map((holding, index) => (
-                <HoldingRow
-                  key={holding.ticker}
-                  holding={holding}
-                  company={companies[index]?.data}
-                  onRemove={onRemove}
-                />
-              ))}
+              {holdings.map((holding, index) => {
+                const row = priced.find((item) => item.holding.ticker === holding.ticker);
+                const pnl = row ? row.value - holding.shares * holding.costBasis : null;
+                return (
+                  <HoldingRow
+                    key={holding.ticker}
+                    holding={holding}
+                    company={companies[index]?.data}
+                    contributionPct={pnl !== null && totalCost > 0 ? (pnl / totalCost) * 100 : null}
+                    onClose={onClosePosition}
+                  />
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+
+      <div className="rounded border border-slate-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold">Transaction history</h2>
+        {transactions.length === 0 ? (
+          <p className="text-sm text-slate-500">No transactions recorded.</p>
+        ) : (
+          <div className="overflow-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-100 text-xs uppercase">
+                <tr>
+                  <th className="px-3 py-2">Date</th>
+                  <th className="px-3 py-2">Ticker</th>
+                  <th className="px-3 py-2">Side</th>
+                  <th className="px-3 py-2">Shares</th>
+                  <th className="px-3 py-2">Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...transactions]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .map((transaction) => (
+                    <tr key={transaction.id} className="border-t border-slate-100">
+                      <td className="px-3 py-2">{transaction.date.slice(0, 10)}</td>
+                      <td className="px-3 py-2">{transaction.ticker}</td>
+                      <td className="px-3 py-2">{transaction.side}</td>
+                      <td className="tabular px-3 py-2">{transaction.shares}</td>
+                      <td className="tabular px-3 py-2">
+                        {formatMetric(transaction.price, 'currency')}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

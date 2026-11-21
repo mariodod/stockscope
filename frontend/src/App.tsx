@@ -100,8 +100,9 @@ export default function App() {
               element={
                 <PortfolioPage
                   holdings={portfolio.holdings}
-                  onAdd={portfolio.add}
-                  onRemove={portfolio.remove}
+                  transactions={portfolio.transactions}
+                  onAddTransaction={portfolio.addTransaction}
+                  onClosePosition={portfolio.closePosition}
                 />
               }
             />
