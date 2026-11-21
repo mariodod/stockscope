@@ -84,6 +84,7 @@ Providers sit behind a common interface (`app/providers/base.py`) so a source ca
 | Job | Provider | Command | Notes |
 | --- | --- | --- | --- |
 | `universe` | SEC EDGAR | `python -m app.ingestion.runner --job universe` | Free, no key; ~10,400 US listings |
+| `universe` | FMP | `python -m app.ingestion.runner --job universe --provider fmp` | Needs `FMP_API_KEY`; use for broader exchange coverage |
 | `quotes` | FMP | `python -m app.ingestion.runner --job quotes` | Needs `FMP_API_KEY` in `.env` |
 | `fundamentals` | yfinance | `python -m app.ingestion.runner --job fundamentals --limit 100` | Free, no key; start with a limit to respect rate limits |
 

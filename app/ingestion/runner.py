@@ -27,7 +27,9 @@ def _active_tickers(session: Session, limit: int | None) -> list[str]:
     return list(session.scalars(query).all())
 
 
-def run_job(job: str, limit: int | None = None) -> None:
+def run_job(
+    job: str, limit: int | None = None, universe_provider: str = "sec"
+) -> None:
     """Run one ingestion job and record its outcome in RefreshRun."""
     providers = build_providers()
     if job == "prune":
@@ -38,7 +40,7 @@ def run_job(job: str, limit: int | None = None) -> None:
         return
     with SessionLocal() as session:
         if job in {"universe", "all"}:
-            provider: Provider = providers["sec"]
+            provider: Provider = providers[universe_provider]
             with track_refresh(session, "universe", provider.name) as run:
                 run.rows_written = sync_universe(session, provider, limit)
         if job in {"quotes", "all"}:
@@ -59,8 +61,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--job", choices=JOBS, required=True)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--provider",
+        choices=("sec", "fmp"),
+        default="sec",
+        help="Universe provider (fmp requires FMP_API_KEY)",
+    )
     args = parser.parse_args()
-    run_job(args.job, args.limit)
+    run_job(args.job, args.limit, args.provider)
 
 
 if __name__ == "__main__":
