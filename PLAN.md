@@ -300,10 +300,14 @@ Each milestone ends in a verifiable state. Acceptance criteria are checked befor
 | 2026-11-20 | Latest values are chosen by as-of date with quote precedence | Numeric `max()` picked stale, larger values and disagreed with company detail |
 | 2026-11-20 | Read-only API responses use an in-process TTL cache | Metrics, sectors and data-quality change rarely; no extra service needed |
 | 2026-11-20 | Scheduler runs as a separate long-lived process | `BackgroundScheduler` is a daemon and cannot keep the API process alive on its own |
+| 2026-11-21 | Keep latest metrics computed on the fly | 0.848s for 10,400 companies; a materialized view adds refresh complexity without a measured need |
+| 2026-11-21 | Retain five years of daily quotes | `--job prune` removes older rows; balances YoY history against database size |
+| 2026-11-21 | Saved screens use capability tokens, no accounts | Shareable URLs without an auth system; tokens are unguessable and read-only |
 
-## 15. Open questions (revisit before M2)
+## 15. Resolved questions
 
-- Which free provider tier gives the best metric coverage in practice? (validate with a small sample during M1.)
-- Is SEC EDGAR mapping worth the effort in v1, or only for the metrics yfinance lacks?
-- Should latest metrics be a materialized view refreshed per ingestion, or computed on the fly? (Measure in M3.)
-- What is the retention policy for daily quote history (1y vs 5y)?
+- **Provider mix:** SEC EDGAR supplies the free universe and authoritative fundamentals; yfinance supplies broad ratios; FMP supplies quotes and an optional universe source. FMP requires a key, so SEC and yfinance are the default paths. This combination produced 10,400 companies and 51 facts for 3 tickers in live runs.
+- **SEC EDGAR mapping:** worth keeping. It is the only free authoritative source for full-history US fundamentals and the fallback when yfinance changes its payloads. Its XBRL mapping is isolated in one adapter.
+- **Latest metrics:** computed on the fly. The SQL pivot plus Python ranking benchmarked at 0.848s for 10,400 companies and 41,600 facts on a quiet machine, well under the 1s target. A materialized view would add refresh complexity without a measured need.
+- **Quote retention:** five years (`QUOTE_RETENTION_DAYS=1825`), pruned by `python -m app.ingestion.runner --job prune`. This balances history for year-over-year metrics against database size.
+- **Live FMP verification:** still needs an `FMP_API_KEY` from the operator; fixtures cover the adapter in CI.
