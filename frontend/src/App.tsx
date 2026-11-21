@@ -79,7 +79,12 @@ export default function App() {
             <Route
               path="/alerts"
               element={
-                <AlertsPage alerts={alerts.alerts} onAdd={alerts.add} onRemove={alerts.remove} />
+                <AlertsPage
+                  alerts={alerts.alerts}
+                  onAddAlert={alerts.addAlert}
+                  onRemove={alerts.remove}
+                  onMarkFilingSeen={alerts.markFilingSeen}
+                />
               }
             />
             <Route

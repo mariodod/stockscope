@@ -41,11 +41,26 @@ class QuoteSeed:
 
 
 @dataclass(frozen=True)
+class FilingSeed:
+    accession_number: str
+    form: str
+    filing_date: date
+    primary_document: str | None = None
+    source: str = ""
+
+
+@dataclass(frozen=True)
 class DividendSeed:
     ex_date: date
     pay_date: date | None = None
     amount_per_share: Decimal | None = None
     source: str = ""
+
+
+class FilingProvider(Protocol):
+    name: str
+
+    def get_recent_filings(self, cik: str | None, limit: int = 20) -> Iterator[FilingSeed]: ...
 
 
 class DividendProvider(Protocol):

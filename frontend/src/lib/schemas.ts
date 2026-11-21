@@ -158,6 +158,24 @@ export const fairValueSchema = z.object({
   ),
 });
 
+export type Filing = {
+  ticker: string;
+  company_name: string;
+  accession_number: string;
+  form: string;
+  filing_date: string;
+  primary_document: string | null;
+};
+
+export const filingSchema = z.object({
+  ticker: z.string(),
+  company_name: z.string(),
+  accession_number: z.string(),
+  form: z.string(),
+  filing_date: z.string(),
+  primary_document: z.string().nullable(),
+});
+
 export const dividendSchema = z.object({
   ticker: z.string(),
   company_name: z.string(),

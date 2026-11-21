@@ -3,6 +3,7 @@
 from app.db.base import Base
 from app.models.company import Company
 from app.models.dividend_event import DividendEvent
+from app.models.filing_event import FilingEvent
 from app.models.fundamental_fact import FundamentalFact
 from app.models.metric_definition import MetricDefinition, MetricDirection
 from app.models.quote import Quote
@@ -13,6 +14,7 @@ __all__ = [
     "Base",
     "Company",
     "DividendEvent",
+    "FilingEvent",
     "FundamentalFact",
     "MetricDefinition",
     "MetricDirection",

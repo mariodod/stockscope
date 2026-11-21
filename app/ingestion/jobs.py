@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.models import (
     Company,
     DividendEvent,
+    FilingEvent,
     FundamentalFact,
     MetricDefinition,
     Quote,
@@ -19,6 +20,7 @@ from app.models import (
 from app.providers.base import (
     CompanySeed,
     DividendProvider,
+    FilingProvider,
     PriceHistoryProvider,
     Provider,
 )
@@ -131,6 +133,37 @@ def refresh_quotes(
         quote.fifty_two_week_low = seed.fifty_two_week_low
         quote.source = seed.source or provider.name
         written += 1
+    session.commit()
+    return written
+
+
+def refresh_filings(session: Session, provider: FilingProvider, tickers: list[str]) -> int:
+    """Upsert SEC filings by company and accession number."""
+    companies = _companies(session)
+    existing = {
+        (event.company_id, event.accession_number): event
+        for event in session.scalars(select(FilingEvent)).all()
+    }
+    written = 0
+    for ticker in tickers:
+        company = companies.get(ticker)
+        if company is None:
+            continue
+        for seed in provider.get_recent_filings(company.cik):
+            key = (company.id, seed.accession_number)
+            event = existing.get(key)
+            if event is None:
+                event = FilingEvent(
+                    company_id=company.id,
+                    accession_number=seed.accession_number,
+                    source=seed.source or provider.name,
+                )
+                session.add(event)
+                existing[key] = event
+            event.form = seed.form
+            event.filing_date = seed.filing_date
+            event.primary_document = seed.primary_document
+            written += 1
     session.commit()
     return written
 

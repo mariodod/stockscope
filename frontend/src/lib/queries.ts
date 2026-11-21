@@ -7,6 +7,7 @@ import {
   dataQualitySchema,
   dividendSchema,
   fairValueSchema,
+  filingSchema,
   metricSchema,
   pagedCompaniesSchema,
   screenStateSchema,
@@ -34,6 +35,16 @@ export function useCompany(ticker: string) {
     queryKey: ['company', ticker],
     queryFn: () => apiGet(`/api/v1/companies/${ticker}`, companyDetailSchema),
     enabled: ticker.length > 0,
+  });
+}
+
+export function useFilings(days: number, tickers: string[]) {
+  const query = new URLSearchParams({ days: String(days) });
+  for (const ticker of tickers) query.append('tickers', ticker);
+  return useQuery({
+    queryKey: ['filings', days, tickers.join(',')],
+    queryFn: () => apiGet(`/api/v1/filings?${query.toString()}`, z.array(filingSchema)),
+    enabled: tickers.length > 0,
   });
 }
 

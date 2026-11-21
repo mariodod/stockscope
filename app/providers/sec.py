@@ -7,12 +7,13 @@ from typing import Any
 import httpx
 
 from app.config import settings
-from app.providers.base import CompanySeed, FactSeed
+from app.providers.base import CompanySeed, FactSeed, FilingSeed
 from app.providers.http import RateLimiter, fetch_json
 from app.providers.values import dec
 
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
+SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 
 TAG_MAP = {
     "Revenues": ("revenue", "currency"),
@@ -58,6 +59,38 @@ class SECProvider:
 
     def get_quote(self, ticker: str) -> None:
         return None
+
+    def get_recent_filings(
+        self, cik: str | None, limit: int = 20
+    ) -> Iterator[FilingSeed]:
+        if not cik:
+            return
+        payload = fetch_json(
+            self.client,
+            SUBMISSIONS_URL.format(cik=int(cik)),
+            headers=self._headers(),
+            limiter=self.limiter,
+        )
+        recent = payload.get("filings", {}).get("recent", {})
+        forms = recent.get("form", [])
+        dates = recent.get("filingDate", [])
+        documents = recent.get("primaryDocument", [])
+        for index, accession in enumerate(recent.get("accessionNumber", [])[:limit]):
+            if index >= len(forms) or index >= len(dates):
+                break
+            form = forms[index]
+            filing_date = dates[index]
+            try:
+                day = date.fromisoformat(filing_date)
+            except (TypeError, ValueError):
+                continue
+            yield FilingSeed(
+                accession_number=str(accession),
+                form=str(form),
+                filing_date=day,
+                primary_document=documents[index] if index < len(documents) else None,
+                source=self.name,
+            )
 
     def _entries(
         self, facts: dict[str, Any], tag: str, unit: str = "USD"

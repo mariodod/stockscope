@@ -13,9 +13,25 @@ export const alertSchema = z.object({
 });
 export type Alert = z.infer<typeof alertSchema>;
 
-const alertsSchema = z.array(alertSchema);
+export const filingAlertSchema = z.object({
+  id: z.string(),
+  kind: z.literal('filing'),
+  ticker: z.string().regex(/^[A-Z0-9.-]{1,16}$/),
+  forms: z.array(z.string()).default([]),
+  lastSeen: z.string(),
+  createdAt: z.string(),
+});
+export type FilingAlert = z.infer<typeof filingAlertSchema>;
 
-function read(storage: Storage): Alert[] {
+export type AnyAlert = Alert | FilingAlert;
+
+const alertsSchema = z.array(z.union([alertSchema, filingAlertSchema]));
+
+export function isFilingAlert(alert: AnyAlert): alert is FilingAlert {
+  return 'kind' in alert && alert.kind === 'filing';
+}
+
+function read(storage: Storage): AnyAlert[] {
   try {
     const raw: unknown = JSON.parse(storage.getItem(STORAGE_KEY) ?? '[]');
     const parsed = alertsSchema.safeParse(raw);
@@ -25,7 +41,7 @@ function read(storage: Storage): Alert[] {
   }
 }
 
-function write(storage: Storage, alerts: Alert[]): void {
+function write(storage: Storage, alerts: AnyAlert[]): void {
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify(alerts));
   } catch {
@@ -34,7 +50,7 @@ function write(storage: Storage, alerts: Alert[]): void {
 }
 
 export function useAlerts() {
-  const [alerts, setAlerts] = useState<Alert[]>(() => read(window.localStorage));
+  const [alerts, setAlerts] = useState<AnyAlert[]>(() => read(window.localStorage));
 
   useEffect(() => {
     const sync = (event: StorageEvent) => {
@@ -44,13 +60,13 @@ export function useAlerts() {
     return () => window.removeEventListener('storage', sync);
   }, []);
 
-  const update = useCallback((next: Alert[]) => {
+  const update = useCallback((next: AnyAlert[]) => {
     setAlerts(next);
     write(window.localStorage, next);
   }, []);
 
-  const add = useCallback(
-    (alert: Alert) => update([...alerts, alert]),
+  const addAlert = useCallback(
+    (alert: AnyAlert) => update([...alerts, alert]),
     [alerts, update],
   );
 
@@ -59,7 +75,17 @@ export function useAlerts() {
     [alerts, update],
   );
 
-  return { alerts, add, remove };
+  const markFilingSeen = useCallback(
+    (id: string, lastSeen: string) =>
+      update(
+        alerts.map((alert) =>
+          alert.id === id && isFilingAlert(alert) ? { ...alert, lastSeen } : alert,
+        ),
+      ),
+    [alerts, update],
+  );
+
+  return { alerts, addAlert, remove, markFilingSeen };
 }
 
 export function isTriggered(value: number | null, op: Alert['op'], threshold: number): boolean {
@@ -68,4 +94,14 @@ export function isTriggered(value: number | null, op: Alert['op'], threshold: nu
   if (op === 'lte') return value <= threshold;
   if (op === 'gt') return value > threshold;
   return value >= threshold;
+}
+
+export function notify(title: string, body: string): void {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  new Notification(title, { body });
+}
+
+export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (typeof Notification === 'undefined') return 'denied';
+  return Notification.requestPermission();
 }
