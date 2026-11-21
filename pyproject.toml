@@ -22,6 +22,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+cache = ["redis>=5"]
 dev = [
   "pytest>=8.3",
   "pytest-cov>=6.0",
@@ -53,5 +54,5 @@ python_version = "3.12"
 strict = true
 exclude = ["^alembic/"]
 [[tool.mypy.overrides]]
-module = ["psycopg.*", "yfinance.*", "apscheduler.*"]
+module = ["psycopg.*", "yfinance.*", "apscheduler.*", "redis.*"]
 ignore_missing_imports = true

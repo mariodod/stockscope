@@ -1,11 +1,25 @@
-"""Small thread-safe TTL cache for read-only API responses."""
+"""Thread-safe TTL caches for read-only API responses.
 
+In-memory by default; set REDIS_URL and install the `cache` extra to share a
+cache between processes.
+"""
+
+import json
 import threading
 import time
 from collections.abc import Callable
-from typing import TypeVar, cast
+from decimal import Decimal
+from typing import Any, Protocol, TypeVar, cast
+
+from app.config import settings
 
 T = TypeVar("T")
+
+
+class Cache(Protocol):
+    def get_or_set(self, key: str, loader: Callable[[], T]) -> T: ...
+
+    def clear(self) -> None: ...
 
 
 class TTLCache:
@@ -31,4 +45,44 @@ class TTLCache:
             self._entries.clear()
 
 
-api_cache = TTLCache(default_ttl=60.0)
+def _encode(value: Any) -> Any:
+    if hasattr(value, "model_dump"):
+        return value.model_dump(mode="json")
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return str(value)
+    raise TypeError(f"Cannot cache value of type {type(value).__name__}")
+
+
+class RedisCache:
+    prefix = "stockscope:"
+
+    def __init__(self, client: Any, default_ttl: int = 60) -> None:
+        self.client = client
+        self.default_ttl = default_ttl
+
+    def get_or_set(self, key: str, loader: Callable[[], T]) -> T:
+        full_key = f"{self.prefix}{key}"
+        cached = self.client.get(full_key)
+        if cached is not None:
+            return cast(T, json.loads(cached))
+        value = loader()
+        self.client.set(full_key, json.dumps(value, default=_encode), ex=self.default_ttl)
+        return value
+
+    def clear(self) -> None:
+        for key in self.client.keys(f"{self.prefix}*"):
+            self.client.delete(key)
+
+
+def build_cache() -> Cache:
+    if not settings.redis_url:
+        return TTLCache()
+    import redis
+
+    client = redis.from_url(settings.redis_url)
+    return RedisCache(client)
+
+
+api_cache = build_cache()

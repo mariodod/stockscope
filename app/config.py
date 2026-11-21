@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./stockscope.db"
     stale_after_days: int = 90
     quote_retention_days: int = 5 * 365
+    redis_url: str = ""
     fmp_api_key: str = ""
     sec_user_agent: str = "Stockscope research contact@example.com"
     quote_refresh_cron: str = "0 22 * * 1-5"
