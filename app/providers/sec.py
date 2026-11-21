@@ -1,7 +1,7 @@
 """SEC EDGAR adapter: free company universe and authoritative XBRL facts."""
 
 from collections.abc import Iterator
-from datetime import date
+from datetime import UTC, date, datetime, time
 from typing import Any
 
 import httpx
@@ -135,12 +135,12 @@ class SECProvider:
 
     def _latest(
         self, facts: dict[str, Any], tag: str, unit: str = "USD"
-    ) -> tuple[float | None, date | None, str | None]:
+    ) -> tuple[float | None, date | None, str | None, date | None]:
         entries = self._entries(facts, tag, unit)
         if not entries:
-            return None, None, None
-        start, end, _, value = self._select(entries)
-        return value, end, self._period(start, end)
+            return None, None, None, None
+        start, end, filed, value = self._select(entries)
+        return value, end, self._period(start, end), filed
 
     def get_fundamentals(self, ticker: str, cik: str | None = None) -> Iterator[FactSeed]:
         if not cik:
@@ -151,7 +151,7 @@ class SECProvider:
             headers=self._headers(),
             limiter=self.limiter,
         )
-        values: dict[str, tuple[float | None, date | None, str | None]] = {}
+        values: dict[str, tuple[float | None, date | None, str | None, date | None]] = {}
         for tag, (metric_key, _unit) in TAG_MAP.items():
             unit = "USD/shares" if metric_key == "eps_ttm" else "USD"
             latest = self._latest(facts, tag, unit)
@@ -163,7 +163,7 @@ class SECProvider:
 
         operating_entries = self._entries(facts, "OperatingIncomeLoss")
         if operating_entries:
-            start, end, _, operating_income = self._select(operating_entries)
+            start, end, filed, operating_income = self._select(operating_entries)
             depreciation_entries = [
                 entry
                 for entry in self._entries(facts, "DepreciationDepletionAndAmortization")
@@ -177,11 +177,14 @@ class SECProvider:
                     value=dec(operating_income + depreciation),
                     unit="currency",
                     as_of_date=end,
+                    filed_at=datetime.combine(filed, time.min, tzinfo=UTC) if filed else None,
                     source=self.name,
                 )
 
         for metric_key in ("revenue", "eps_ttm", "cash_and_equivalents"):
-            value, as_of_date, period = values.get(metric_key, (None, None, None))
+            value, as_of_date, period, filed = values.get(
+                metric_key, (None, None, None, None)
+            )
             if value is None:
                 continue
             yield FactSeed(
@@ -190,5 +193,6 @@ class SECProvider:
                 value=dec(value),
                 unit="currency",
                 as_of_date=as_of_date or date.today(),
+                filed_at=datetime.combine(filed, time.min, tzinfo=UTC) if filed else None,
                 source=self.name,
             )

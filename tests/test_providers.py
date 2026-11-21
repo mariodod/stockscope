@@ -181,6 +181,7 @@ def test_sec_adapter_maps_universe_and_derives_ebitda() -> None:
     facts = {fact.metric_key: fact for fact in provider.get_fundamentals("AAPL", "320193")}
     assert facts["revenue"].value == Decimal("391000000000")
     assert facts["ebitda"].value == Decimal("134000000000")
+    assert facts["revenue"].filed_at is None
     assert provider.name == "sec"
 
 
@@ -251,6 +252,39 @@ def test_sec_reads_per_share_eps() -> None:
 
     assert facts["eps_ttm"].value == Decimal("6.5")
     assert facts["eps_ttm"].period == "FY"
+
+
+def test_sec_sets_filed_at_from_xbrl() -> None:
+    payload = {
+        "facts": {
+            "us-gaap": {
+                "Revenues": {
+                    "units": {
+                        "USD": [
+                            {
+                                "form": "10-K",
+                                "start": "2025-01-01",
+                                "end": "2025-12-31",
+                                "filed": "2026-02-10",
+                                "val": 100,
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload))
+    )
+
+    facts = {
+        fact.metric_key: fact
+        for fact in SECProvider(client=client).get_fundamentals("X", "1")
+    }
+
+    assert facts["revenue"].filed_at is not None
+    assert facts["revenue"].filed_at.date() == date(2026, 2, 10)
 
 
 def test_sec_keeps_newest_revenue_from_duplicate_tags() -> None:
