@@ -40,6 +40,8 @@ INFO_FIELDS = {
     "dividendYield": ("dividend_yield", "percent"),
     "payoutRatio": ("payout_ratio", "percent"),
     "beta": ("beta", "ratio"),
+    "forwardEps": ("forward_eps", "currency"),
+    "earningsGrowth": ("earnings_growth_estimate", "percent"),
 }
 
 

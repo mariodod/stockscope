@@ -12,6 +12,7 @@ This is the canonical vocabulary for metrics used across ingestion, API, and UI.
 | `enterprise_value` | Enterprise value | market cap + total debt − cash | currency | high |
 | `pe_ratio` | P/E (TTM) | price / trailing EPS | ratio | low |
 | `forward_pe` | Forward P/E | price / estimated forward EPS | ratio | low |
+| `forward_eps` | Forward EPS (estimate) | analyst forward EPS estimate | currency | high |
 | `peg_ratio` | PEG | P/E / earnings growth rate | ratio | low |
 | `price_to_sales` | P/S | market cap / revenue (TTM) | ratio | low |
 | `price_to_book` | P/B | market cap / book value | ratio | low |
@@ -39,6 +40,7 @@ This is the canonical vocabulary for metrics used across ingestion, API, and UI.
 | `revenue_growth_yoy` | Revenue growth YoY | (rev TTM / rev prior TTM) − 1 | percent | high |
 | `earnings_growth_yoy` | Earnings growth YoY | (EPS TTM / EPS prior TTM) − 1 | percent | high |
 | `eps_growth_5y` | EPS growth (5y CAGR) | compounded annual EPS growth, 5 years | percent | high |
+| `earnings_growth_estimate` | Earnings growth estimate | analyst forward earnings growth estimate | percent | high |
 
 ## Financial health
 

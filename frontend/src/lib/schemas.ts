@@ -134,6 +134,22 @@ export const simulationResultSchema = z.object({
   ),
 });
 
+export const fairValueSchema = z.object({
+  ticker: z.string(),
+  forward_eps: z.number(),
+  current_price: z.number().nullable(),
+  growth_estimate: z.number().nullable(),
+  base_pe: z.number(),
+  scenarios: z.array(
+    z.object({
+      name: z.string(),
+      pe_multiple: z.number(),
+      fair_value: z.number(),
+      upside_pct: z.number(),
+    }),
+  ),
+});
+
 export const dividendSchema = z.object({
   ticker: z.string(),
   company_name: z.string(),

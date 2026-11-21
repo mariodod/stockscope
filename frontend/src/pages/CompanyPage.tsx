@@ -12,7 +12,7 @@ import {
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { formatMetric, isStale, toNumber } from '../lib/format';
-import { useCompany, useDataQuality, usePeers } from '../lib/queries';
+import { useCompany, useDataQuality, useFairValue, usePeers } from '../lib/queries';
 
 const CHART_METRICS = ['revenue', 'ebitda', 'eps_ttm'];
 
@@ -22,6 +22,7 @@ export function CompanyPage() {
   const companyQuery = useCompany(ticker ?? '');
   const qualityQuery = useDataQuality();
   const peersQuery = usePeers(ticker ?? '');
+  const fairValueQuery = useFairValue(ticker ?? '');
   const staleAfterDays = qualityQuery.data?.stale_after_days ?? 90;
   const detail = companyQuery.data;
 
@@ -118,6 +119,35 @@ export function CompanyPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="rounded border border-slate-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold">Fair value scenarios</h2>
+        {fairValueQuery.data ? (
+          <div className="space-y-2 text-sm">
+            <p className="text-slate-600">
+              Forward EPS {fairValueQuery.data.forward_eps} · base P/E{' '}
+              {fairValueQuery.data.base_pe}
+            </p>
+            <div className="grid gap-3 md:grid-cols-3">
+              {fairValueQuery.data.scenarios.map((scenario) => (
+                <div key={scenario.name} className="rounded border border-slate-200 p-3">
+                  <p className="text-xs uppercase text-slate-500">{scenario.name}</p>
+                  <p className="tabular text-lg">${scenario.fair_value}</p>
+                  <p className="text-xs text-slate-500">
+                    {scenario.pe_multiple}× P/E · {scenario.upside_pct}% vs price
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">
+            {fairValueQuery.isError
+              ? fairValueQuery.error.message
+              : 'No analyst estimate available.'}
+          </p>
+        )}
       </section>
 
       <section className="rounded border border-slate-200 bg-white p-4">

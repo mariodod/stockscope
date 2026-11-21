@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.api.deps import DbSession
 from app.cache import api_cache
 from app.models import Company
+from app.schemas.fair_value import FairValueRead
 from app.schemas.screen import (
     CompanyDetail,
     FactPoint,
@@ -18,6 +19,7 @@ from app.schemas.screen import (
     SortDirection,
     SortSpec,
 )
+from app.services.fair_value import fair_value
 from app.services.metrics import (
     QUOTE_KEYS,
     fact_history,
@@ -107,6 +109,17 @@ def get_company(ticker: str, db: DbSession) -> CompanyDetail:
         latest_metrics=list(latest.values()),
         history=history,
     )
+
+
+@router.get("/companies/{ticker}/fair-value", response_model=FairValueRead)
+def get_fair_value(
+    ticker: str,
+    db: DbSession,
+    low_pe: float | None = None,
+    base_pe: float | None = None,
+    high_pe: float | None = None,
+) -> FairValueRead:
+    return fair_value(db, ticker, low_pe, base_pe, high_pe)
 
 
 @router.get("/companies/{ticker}/peers", response_model=PagedCompanies)

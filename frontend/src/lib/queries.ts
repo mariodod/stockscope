@@ -6,6 +6,7 @@ import {
   companyDetailSchema,
   dataQualitySchema,
   dividendSchema,
+  fairValueSchema,
   metricSchema,
   pagedCompaniesSchema,
   screenStateSchema,
@@ -32,6 +33,15 @@ export function useCompany(ticker: string) {
     queryKey: ['company', ticker],
     queryFn: () => apiGet(`/api/v1/companies/${ticker}`, companyDetailSchema),
     enabled: ticker.length > 0,
+  });
+}
+
+export function useFairValue(ticker: string) {
+  return useQuery({
+    queryKey: ['fair-value', ticker],
+    queryFn: () => apiGet(`/api/v1/companies/${ticker}/fair-value`, fairValueSchema),
+    enabled: ticker.length > 0,
+    retry: false,
   });
 }
 
