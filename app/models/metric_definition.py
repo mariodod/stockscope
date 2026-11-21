@@ -1,9 +1,8 @@
 """Registry of canonical metric keys used across ingestion, API, and UI."""
 
-from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import Boolean, DateTime, String, Text, func
+from sqlalchemy import Boolean, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +32,3 @@ class MetricDefinition(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     is_derived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )

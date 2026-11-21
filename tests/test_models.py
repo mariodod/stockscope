@@ -8,8 +8,14 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Company, FundamentalFact
+from app.models import Base, Company, FundamentalFact
 from app.seed.metrics import seed_metrics
+
+
+def test_models_have_no_unused_audit_columns() -> None:
+    for table in Base.metadata.sorted_tables:
+        assert "created_at" not in table.columns, table.name
+        assert "updated_at" not in table.columns, table.name
 
 
 def test_company_ticker_is_unique(db_session: Session) -> None:
